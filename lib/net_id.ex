@@ -1,7 +1,7 @@
-defmodule Common.NetID do
+defmodule Chatter.NetID do
 
   require Record
-  alias Common.Serializer
+  alias Chatter.Serializer
 
   Record.defrecord :net_id,
                    ip: nil,

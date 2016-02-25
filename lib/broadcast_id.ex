@@ -1,9 +1,9 @@
-defmodule Common.BroadcastID do
+defmodule Chatter.BroadcastID do
 
   require Record
-  require Common.NetID
-  alias Common.NetID
-  alias Common.Serializer
+  require Chatter.NetID
+  alias Chatter.NetID
+  alias Chatter.Serializer
 
   Record.defrecord :broadcast_id,
                    origin: nil,

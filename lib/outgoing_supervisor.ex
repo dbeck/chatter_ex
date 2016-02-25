@@ -1,13 +1,13 @@
-defmodule GroupManager.Chatter.OutgoingSupervisor do
+defmodule Chatter.OutgoingSupervisor do
 
   use Supervisor
-  require GroupManager.Chatter.Gossip
-  require Common.NetID
-  require Common.BroadcastID
-  alias GroupManager.Chatter.OutgoingHandler
-  alias GroupManager.Chatter.Gossip
-  alias Common.NetID
-  alias Common.BroadcastID
+  require Chatter.Gossip
+  require Chatter.NetID
+  require Chatter.BroadcastID
+  alias Chatter.OutgoingHandler
+  alias Chatter.Gossip
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   def start_link(args, opts \\ []) do
     case opts do

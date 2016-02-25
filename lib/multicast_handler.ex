@@ -1,16 +1,16 @@
-defmodule GroupManager.Chatter.MulticastHandler do
+defmodule Chatter.MulticastHandler do
 
   use ExActor.GenServer
-  require GroupManager.Chatter.Gossip
-  require Common.BroadcastID
-  require Common.NetID
+  require Chatter.Gossip
+  require Chatter.BroadcastID
+  require Chatter.NetID
   require Logger
-  alias GroupManager.Chatter.Gossip
-  alias GroupManager.Chatter.PeerDB
+  alias Chatter.Gossip
+  alias Chatter.PeerDB
   alias GroupManager.Receiver
-  alias Common.NetID
-  alias Common.Serializer
-  alias Common.BroadcastID
+  alias Chatter.NetID
+  alias Chatter.Serializer
+  alias Chatter.BroadcastID
 
   defstart start_link([own_id:        own_id,
                        multicast_id:  multi_id,

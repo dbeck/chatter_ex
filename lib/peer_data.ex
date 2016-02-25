@@ -1,10 +1,10 @@
-defmodule GroupManager.Chatter.PeerData do
+defmodule Chatter.PeerData do
 
   require Record
-  require Common.NetID
-  require Common.BroadcastID
-  alias Common.NetID
-  alias Common.BroadcastID
+  require Chatter.NetID
+  require Chatter.BroadcastID
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   Record.defrecord :peer_data,
                    id: nil,

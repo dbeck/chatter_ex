@@ -1,20 +1,20 @@
-defmodule GroupManager.Chatter do
+defmodule Chatter.Supervisor do
 
   use Supervisor
   require Logger
-  require GroupManager.Data.Message
-  require GroupManager.Data.WorldClock
-  require GroupManager.Data.TimedSet
-  require GroupManager.Chatter.Gossip
-  require GroupManager
-  require Common.BroadcastID
-  require Common.NetID
-  alias GroupManager.Chatter.OutgoingSupervisor
-  alias GroupManager.Chatter.MulticastHandler
-  alias GroupManager.Chatter.PeerDB
-  alias GroupManager.Chatter.Gossip
-  alias GroupManager.Data.Message
-  alias Common.NetID
+  #require GroupManager.Data.Message
+  #require GroupManager.Data.WorldClock
+  #require GroupManager.Data.TimedSet
+  #require GroupManager
+  require Chatter.Gossip
+  require Chatter.BroadcastID
+  require Chatter.NetID
+  alias Chatter.OutgoingSupervisor
+  alias Chatter.MulticastHandler
+  alias Chatter.PeerDB
+  alias Chatter.Gossip
+  #alias GroupManager.Data.Message
+  alias Chatter.NetID
 
   def start_link(opts \\ [])
   do
@@ -34,11 +34,11 @@ defmodule GroupManager.Chatter do
     opts = [port: NetID.port(own_id)]
 
     listener_spec = :ranch.child_spec(
-      :"GroupManager.Chatter.IncomingHandler",
+      :"Chatter.IncomingHandler",
       100,
       :ranch_tcp,
       opts,
-      GroupManager.Chatter.IncomingHandler,
+      Chatter.IncomingHandler,
       [own_id: own_id, key: group_manager_key]
     )
 

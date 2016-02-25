@@ -1,10 +1,10 @@
-defmodule GroupManager.Chatter.PeerDBTest do
+defmodule Chatter.PeerDBTest do
 
   use ExUnit.Case
-  alias GroupManager.Chatter.PeerDB
-  alias GroupManager.Chatter.PeerData
-  alias Common.NetID
-  alias Common.BroadcastID
+  alias Chatter.PeerDB
+  alias Chatter.PeerData
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   test "locate PeerDB" do
     pid = PeerDB.locate

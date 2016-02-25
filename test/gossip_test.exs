@@ -1,9 +1,9 @@
-defmodule GroupManager.Chatter.GossipTest do
+defmodule Chatter.GossipTest do
 
   use ExUnit.Case
-  alias GroupManager.Chatter.Gossip
-  alias Common.NetID
-  alias Common.BroadcastID
+  alias Chatter.Gossip
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   test "basic test for new(netid, data)" do
     assert Gossip.valid?(Gossip.new(NetID.new({127,0,0,1}, 29999), []))

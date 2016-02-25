@@ -1,13 +1,13 @@
-defmodule GroupManager.Chatter.OutgoingHandler do
+defmodule Chatter.OutgoingHandler do
 
   use ExActor.GenServer
-  require GroupManager.Chatter.Gossip
-  require Common.BroadcastID
-  require Common.NetID
+  require Chatter.Gossip
+  require Chatter.BroadcastID
+  require Chatter.NetID
   require Logger
-  alias GroupManager.Chatter.Gossip
-  alias Common.NetID
-  alias Common.Serializer
+  alias Chatter.Gossip
+  alias Chatter.NetID
+  alias Chatter.Serializer
 
   defstart start_link([own_id: own_id, peer_id: peer_id, key: key], opts),
     gen_server_opts: opts
@@ -71,6 +71,6 @@ defmodule GroupManager.Chatter.OutgoingHandler do
   when NetID.is_valid(id)
   do
     host = NetID.ip(id) |> :inet_parse.ntoa |> String.Chars.to_string
-    String.to_atom("GroupManager.Chatter.OutgoingHandler.#{host}:#{NetID.port(id)}")
+    String.to_atom("Chatter.OutgoingHandler.#{host}:#{NetID.port(id)}")
   end
 end

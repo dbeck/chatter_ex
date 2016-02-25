@@ -1,8 +1,8 @@
-defmodule Common.BroadcastIDTest do
+defmodule Chatter.BroadcastIDTest do
 
   use ExUnit.Case
-  alias Common.NetID
-  alias Common.BroadcastID
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   defp dummy_me do
     NetID.new({1,2,3,4},1)

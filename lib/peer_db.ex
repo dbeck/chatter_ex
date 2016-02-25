@@ -1,12 +1,12 @@
-defmodule GroupManager.Chatter.PeerDB do
+defmodule Chatter.PeerDB do
 
   use ExActor.GenServer
-  require GroupManager.Chatter.PeerData
-  require Common.NetID
-  require Common.BroadcastID
-  alias GroupManager.Chatter.PeerData
-  alias Common.NetID
-  alias Common.BroadcastID
+  require Chatter.PeerData
+  require Chatter.NetID
+  require Chatter.BroadcastID
+  alias Chatter.PeerData
+  alias Chatter.NetID
+  alias Chatter.BroadcastID
 
   defstart start_link([], opts),
     gen_server_opts: opts
