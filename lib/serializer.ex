@@ -1,17 +1,9 @@
 defmodule Chatter.Serializer do
 
   require Chatter.Gossip
-  # require GroupManager.Data.WorldClock
-  # require GroupManager.Data.TimedSet
-  # require GroupManager.Data.TimedItem
-  # require GroupManager.Data.Item
-  # require GroupManager.Data.LocalClock
-  # require GroupManager.Data.Message
-  # require GroupManager
   require Chatter.BroadcastID
   require Chatter.NetID
   alias Chatter.Gossip
-  # alias GroupManager.Data.Message
   alias Chatter.NetID
 
   @spec encode(Gossip.t, binary) :: binary
