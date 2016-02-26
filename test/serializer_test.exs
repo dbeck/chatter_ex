@@ -4,7 +4,8 @@ defmodule Chatter.SerializerTest do
   alias Chatter.Gossip
   alias Chatter.Serializer
   alias Chatter.NetID
-  # alias GroupManager.Data.Message
+  alias Chatter.BroadcastID
+  alias Chatter.Serializable
 
   @default_key "01234567890123456789012345678901"
 
@@ -15,26 +16,26 @@ defmodule Chatter.SerializerTest do
           [{:net_id, {192, 168, 1, 97}, 29999},
            {:net_id, {192, 168, 1, 100}, 29999},
            {:net_id, {192, 168, 1, 134}, 29999}],
-          {:message,
-           {:world_clock,
-            [{:local_clock, {:net_id, {192, 168, 1, 97}, 29999}, 2},
-             {:local_clock, {:net_id, {192, 168, 1, 100}, 29999}, 0},
-             {:local_clock, {:net_id, {192, 168, 1, 134}, 29999}, 0}]},
-           {:timed_set,
-            [{:timed_item, {:item, {:net_id, {192, 168, 1, 97}, 29999}, :get, 0, 4294967295, 0},
-                           {:local_clock, {:net_id, {192, 168, 1, 97}, 29999}, 2}},
-             {:timed_item, {:item, {:net_id, {192, 168, 1, 100}, 29999}, :get, 0, 4294967295, 0},
-                           {:local_clock, {:net_id, {192, 168, 1, 100}, 29999}, 0}},
-             {:timed_item, {:item, {:net_id, {192, 168, 1, 134}, 29999}, :get, 0, 4294967295, 0},
-                           {:local_clock, {:net_id, {192, 168, 1, 134}, 29999}, 0}}]}, "G"}}
-
+          {:serializable}}
 
   defp dummy_me do
     NetID.new({1,2,3,4},1)
   end
 
+  defp dummy_serializable do
+    id = BroadcastID.new(dummy_me, 111)
+    extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
+    encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
+    decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
+    Serializable.new(id, extract_fn, encode_fn, decode_fn)
+  end
+
+  def dummy_gossip do
+    @default_gossip |> Tuple.delete_at(4) |> Tuple.append(dummy_serializable)
+  end
+
   test "encode and decode works together" do
-    g = Gossip.new(dummy_me, 9999, Message.new("hello"))
+    g = dummy_gossip
     assert Gossip.valid?(g)
     encoded = Serializer.encode(g, @default_key)
     assert {:ok, decoded} = Serializer.decode(encoded, @default_key)
@@ -60,14 +61,14 @@ defmodule Chatter.SerializerTest do
   end
 
   test "encode() and decode() gossip works together" do
-    assert Gossip.valid?(@default_gossip)
-    assert {:ok, @default_gossip} == Serializer.encode(@default_gossip, @default_key) |> Serializer.decode(@default_key)
+    assert Gossip.valid?(dummy_gossip)
+    assert {:ok, dummy_gossip} == Serializer.encode(dummy_gossip, @default_key) |> Serializer.decode(@default_key)
   end
 
   test "encode_gossip() and decode_gossip() works together" do
-    encoded = Serializer.encode_gossip(@default_gossip)
+    encoded = Serializer.encode_gossip(dummy_gossip)
     {decoded, <<>>} = Serializer.decode_gossip(encoded)
-    assert decoded == @default_gossip
+    assert decoded == dummy_gossip
   end
 
   test "encode_uint() and decode_uint() works together" do

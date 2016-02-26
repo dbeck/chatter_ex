@@ -2,18 +2,15 @@ defmodule Chatter.Supervisor do
 
   use Supervisor
   require Logger
-  #require GroupManager.Data.Message
-  #require GroupManager.Data.WorldClock
-  #require GroupManager.Data.TimedSet
-  #require GroupManager
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
+  require Chatter.Serializable
   alias Chatter.OutgoingSupervisor
   alias Chatter.MulticastHandler
   alias Chatter.PeerDB
   alias Chatter.Gossip
-  #alias GroupManager.Data.Message
+  alias Chatter.Serializable
   alias Chatter.NetID
 
   def start_link(opts \\ [])
@@ -28,8 +25,9 @@ defmodule Chatter.Supervisor do
 
   def init(:no_args)
   do
-    own_id    = local_netid()
-    multi_id  = multicast_netid()
+    own_id             = Chatter.local_netid()
+    multi_id           = Chatter.multicast_netid()
+    group_manager_key  = Chatter.group_manager_key
 
     opts = [port: NetID.port(own_id)]
 
@@ -45,8 +43,8 @@ defmodule Chatter.Supervisor do
     multicast_args = [
       own_id:          own_id,
       multicast_id:    multi_id,
-      multicast_ttl:   multicast_ttl,
-      key:             group_manager_key
+      multicast_ttl:   Chatter.multicast_ttl,
+      key:             Chatter.group_manager_key
     ]
 
     children = [
@@ -66,16 +64,17 @@ defmodule Chatter.Supervisor do
     broadcast(Gossip.distribution_list(gossip), Gossip.payload(gossip))
   end
 
-  @spec broadcast(list(NetID.t), Message.t) :: :ok
-  def broadcast(distribution_list, msg)
-  when is_list(distribution_list) and Message.is_valid(msg)
+  @spec broadcast(list(NetID.t), Serializable.t) :: :ok
+  def broadcast(distribution_list, ser)
+  when is_list(distribution_list) and
+       Serializable.is_valid(ser)
   do
     :ok = NetID.validate_list(distribution_list)
-    own_id = local_netid()
+    own_id = Chatter.local_netid
     {:ok, seqno} = PeerDB.inc_broadcast_seqno(PeerDB.locate!, own_id)
     {:ok, seen_ids} = PeerDB.get_seen_id_list_(own_id)
 
-    gossip = Gossip.new(own_id, seqno, msg)
+    gossip = Gossip.new(own_id, seqno, ser)
     |> Gossip.distribution_list(distribution_list)
     |> Gossip.seen_ids(seen_ids)
 
@@ -96,7 +95,7 @@ defmodule Chatter.Supervisor do
 
     # outgoing handler uses its already open channels and returns the gossip
     # what couldn't be delivered
-    :ok = OutgoingSupervisor.broadcast(gossip, group_manager_key)
+    :ok = OutgoingSupervisor.broadcast(gossip, Chatter.group_manager_key)
   end
 
   def locate, do: Process.whereis(id_atom())
@@ -109,94 +108,4 @@ defmodule Chatter.Supervisor do
   end
 
   def id_atom, do: __MODULE__
-
-  def get_local_ip
-  do
-    {:ok, list} = :inet.getif
-    [{ip, _broadcast, _netmask}] = list
-    |> Enum.filter( fn({_ip, bcast, _nm}) -> bcast != :undefined end)
-    |> Enum.take(1)
-    ip
-  end
-
-  def local_netid
-  do
-    # try to figure our local IP if not given
-    case Application.fetch_env(:group_manager, :my_addr) do
-      {:ok, nil} ->
-        my_addr = get_local_ip()
-      {:ok, my_addr_str} ->
-        {:ok, my_addr} = my_addr_str |> String.to_char_list |> :inet_parse.address
-      _ ->
-        my_addr = get_local_ip()
-    end
-
-    my_port = case Application.fetch_env(:group_manager, :my_port)
-    do
-      {:ok, val} ->
-        {my_port, ""} = val |> Integer.parse
-        my_port
-      :error ->
-        Logger.info "no my_port config value found for group_manager Application [default: 29999]"
-        29999
-    end
-    NetID.new(my_addr, my_port)
-  end
-
-  def multicast_netid
-  do
-    mcast_addr_str = case Application.fetch_env(:group_manager, :multicast_addr)
-    do
-      {:ok, val} ->
-        val
-      :error ->
-        Logger.info "no multicast_addr config value found for group_manager Application [default: 224.1.1.1]"
-        "224.1.1.1"
-    end
-
-    mcast_port_str = case Application.fetch_env(:group_manager, :multicast_port)
-    do
-      {:ok, val} ->
-        val
-      :error ->
-        Logger.info "no multicast_port config value found for group_manager Application [default: 29999]"
-        "29999"
-    end
-
-    {:ok, multicast_addr} = mcast_addr_str |> String.to_char_list |> :inet_parse.address
-    {multicast_port, ""}  = mcast_port_str |> Integer.parse
-
-    NetID.new(multicast_addr, multicast_port)
-  end
-
-  def multicast_ttl
-  do
-    case Application.fetch_env(:group_manager, :multicast_ttl)
-    do
-      {:ok, mcast_ttl_str} ->
-        {multicast_ttl, ""}   = mcast_ttl_str  |> Integer.parse
-        multicast_ttl
-      :error ->
-        Logger.info "no multicast_ttl config value found for group_manager Application [default: 4]"
-        4
-    end
-  end
-
-  def group_manager_key
-  do
-    case Application.fetch_env(:group_manager, :key)
-    do
-      {:ok, key} when is_binary(key) and byte_size(key) == 32->
-        key
-
-      :error ->
-        Logger.error "no 'key' config value found for group_manager Application"
-        "01234567890123456789012345678901"
-
-      {:ok, key} ->
-        Logger.error "'key' has to be 32 bytes long for group_manager Application"
-        << retval :: binary-size(32), _rest :: binary  >> = key <> "01234567890123456789012345678901"
-        retval
-    end
-  end
 end

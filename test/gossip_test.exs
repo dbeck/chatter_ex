@@ -4,13 +4,34 @@ defmodule Chatter.GossipTest do
   alias Chatter.Gossip
   alias Chatter.NetID
   alias Chatter.BroadcastID
+  alias Chatter.Serializable
+
+  defp dummy_me do
+    NetID.new({1,2,3,4},1)
+  end
+
+  defp dummy_serializable do
+    id = BroadcastID.new(dummy_me, 111)
+    extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
+    encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
+    decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
+    Serializable.new(id, extract_fn, encode_fn, decode_fn)
+  end
+
+  defp dummy_serializable_2 do
+    id = BroadcastID.new(dummy_me, 345)
+    extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
+    encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
+    decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
+    Serializable.new(id, extract_fn, encode_fn, decode_fn)
+  end
 
   test "basic test for new(netid, data)" do
-    assert Gossip.valid?(Gossip.new(NetID.new({127,0,0,1}, 29999), []))
+    assert Gossip.valid?(Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable))
   end
 
   test "basic test for new(netid, seqno, data)" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), 9999, [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), 9999, dummy_serializable)
     assert Gossip.valid?(g)
     assert 9999 == g |> Gossip.current_id |> BroadcastID.seqno
   end
@@ -41,7 +62,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "current_id() get" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id = Gossip.current_id(g)
     assert BroadcastID.valid?(id)
     nid = BroadcastID.origin(id)
@@ -60,7 +81,7 @@ defmodule Chatter.GossipTest do
     assert_raise FunctionClauseError, fn -> Gossip.seen_ids({:gossip, nil, nil}) end
     assert_raise FunctionClauseError, fn -> Gossip.seen_ids({:gossip, nil, nil, nil}) end
 
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     assert_raise FunctionClauseError, fn -> Gossip.seen_ids(nil, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.seen_ids(g, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.seen_ids(g, {}) end
@@ -69,7 +90,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "seen_ids() get and set" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id1 = BroadcastID.new(NetID.new({127,0,0,1}, 29998))
     id2 = BroadcastID.new(NetID.new({127,0,0,1}, 29997))
     g2 = g |> Gossip.seen_ids([id1, id2])
@@ -89,7 +110,7 @@ defmodule Chatter.GossipTest do
     assert_raise FunctionClauseError, fn -> Gossip.distribution_list({:gossip, nil, nil}) end
     assert_raise FunctionClauseError, fn -> Gossip.distribution_list({:gossip, nil, nil, nil}) end
 
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     assert_raise FunctionClauseError, fn -> Gossip.distribution_list(nil, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.distribution_list(g, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.distribution_list(g, {}) end
@@ -98,7 +119,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "distribution_list() get and set" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id1 = NetID.new({127,0,0,1}, 29998)
     id2 = NetID.new({127,0,0,1}, 29997)
     g2 = g |> Gossip.distribution_list([id1, id2])
@@ -108,7 +129,7 @@ defmodule Chatter.GossipTest do
 
   # remove_from_distribution_list
   test "remove_from_distribution_list throws on invalud input" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     assert_raise FunctionClauseError, fn -> Gossip.remove_from_distribution_list(g, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.remove_from_distribution_list(g, [ok: 1]) end
     assert_raise FunctionClauseError, fn -> Gossip.remove_from_distribution_list(g, {}) end
@@ -128,7 +149,7 @@ defmodule Chatter.GossipTest do
 
   # add_to_distribution_list
   test "add_to_distribution_list throws on invalud input" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     assert_raise FunctionClauseError, fn -> Gossip.add_to_distribution_list(g, nil) end
     assert_raise FunctionClauseError, fn -> Gossip.add_to_distribution_list(g, [ok: 1]) end
     assert_raise FunctionClauseError, fn -> Gossip.add_to_distribution_list(g, {}) end
@@ -147,7 +168,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "add and remove to/from the distribution_list" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id1 = NetID.new({127,0,0,1}, 29998)
     id2 = NetID.new({127,0,0,1}, 29997)
     assert [] == g |> Gossip.distribution_list
@@ -163,7 +184,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "add_to_distribution_list is idempotent" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id1 = NetID.new({127,0,0,1}, 29998)
     id2 = NetID.new({127,0,0,1}, 29997)
     g1 = g |> Gossip.add_to_distribution_list([id1])
@@ -176,7 +197,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "remove from distribution_list can be applied multiple times" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     id1 = NetID.new({127,0,0,1}, 29998)
     id2 = NetID.new({127,0,0,1}, 29997)
     g12 = g |> Gossip.add_to_distribution_list([id1, id2])
@@ -202,7 +223,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "seen_netids() get and set" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     ni1 = NetID.new({127,0,0,1}, 29998)
     ni2 = NetID.new({127,0,0,1}, 29997)
     id1 = BroadcastID.new(ni1)
@@ -227,8 +248,8 @@ defmodule Chatter.GossipTest do
   end
 
   test "payload() get/set" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), []) |> Gossip.payload(:hello_world)
-    assert :hello_world == Gossip.payload(g)
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable) |> Gossip.payload(dummy_serializable_2)
+    assert dummy_serializable_2 == Gossip.payload(g)
   end
 
   # extract_netids
@@ -245,14 +266,14 @@ defmodule Chatter.GossipTest do
   end
 
   test "extract_netids() returns own id" do
-    id = NetID.new({127,0,0,1}, 29999)
-    g = Gossip.new(id, [])
+    id = dummy_me
+    g = Gossip.new(id, dummy_serializable)
     assert :ok  == Gossip.extract_netids(g) |> NetID.validate_list
     assert [id] == Gossip.extract_netids(g)
   end
 
   test "extract_netids() returns seen_ids" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     ni1 = NetID.new({127,0,0,1}, 29998)
     ni2 = NetID.new({127,0,0,1}, 29997)
     id1 = BroadcastID.new(ni1)
@@ -263,7 +284,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "extract_netids() returns distribution_list" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     ni1 = NetID.new({127,0,0,1}, 29998)
     ni2 = NetID.new({127,0,0,1}, 29997)
     g2 = g |> Gossip.distribution_list([ni1, ni2])
@@ -284,7 +305,7 @@ defmodule Chatter.GossipTest do
   end
 
   test "encode_with() works with decode_with()" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     ni1 = NetID.new({127,0,0,1}, 29998)
     ni2 = NetID.new({127,0,0,1}, 29997)
     id1 = BroadcastID.new(ni1)
@@ -299,12 +320,12 @@ defmodule Chatter.GossipTest do
 
     encoded = Gossip.encode_with(g, fwd)
     {decoded, <<>>} = Gossip.decode_with(encoded, rev)
-    assert Gossip.payload(decoded, []) == g
+    assert Gossip.payload_relaxed(decoded, dummy_serializable) == g
   end
 
   # decode_with
   test "decode_with() throws on invalid input" do
-    g = Gossip.new(NetID.new({127,0,0,1}, 29999), [])
+    g = Gossip.new(NetID.new({127,0,0,1}, 29999), dummy_serializable)
     ni1 = NetID.new({127,0,0,1}, 29998)
     ni2 = NetID.new({127,0,0,1}, 29997)
     id1 = BroadcastID.new(ni1)

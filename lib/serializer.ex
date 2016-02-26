@@ -3,8 +3,10 @@ defmodule Chatter.Serializer do
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
+  require Chatter.Serializable
   alias Chatter.Gossip
   alias Chatter.NetID
+  alias Chatter.Serializable
 
   @spec encode(Gossip.t, binary) :: binary
   def encode(gossip, key)
@@ -95,7 +97,7 @@ defmodule Chatter.Serializer do
     end)
 
     encoded_gossip  = Gossip.encode_with(gossip, id_map)
-    encoded_message = Message.encode_with(Gossip.payload(gossip), id_map)
+    encoded_message = Serializable.encode_with(Gossip.payload(gossip), id_map)
 
     << id_table :: binary,
        encoded_gossip :: binary,
@@ -115,7 +117,7 @@ defmodule Chatter.Serializer do
     end)
 
     {decoded_gossip, remaining}   = Gossip.decode_with(remaining, id_map)
-    {decoded_message, remaining}  = Message.decode_with(remaining, id_map)
+    {decoded_message, remaining}  = Serializable.decode_with(remaining, id_map)
 
     { Gossip.payload(decoded_gossip, decoded_message), remaining }
   end
@@ -164,10 +166,10 @@ defmodule Chatter.Serializer do
 
   defp decode_uint_(<<>>, val, _scale), do: val
 
-  defp extract_netids(message)
-  when Message.is_valid(message)
+  defp extract_netids(serializable)
+  when Serializable.is_valid(serializable)
   do
-    Message.extract_netids(message)
+    Serializable.extract_netids(serializable)
   end
 
   defp extract_netids(gossip)

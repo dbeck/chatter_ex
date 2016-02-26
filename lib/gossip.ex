@@ -3,8 +3,10 @@ defmodule Chatter.Gossip do
   require Record
   require Chatter.BroadcastID
   require Chatter.NetID
+  require Chatter.Serializable
   alias Chatter.BroadcastID
   alias Chatter.NetID
+  alias Chatter.Serializable
 
   Record.defrecord :gossip,
                    current_id: nil,
@@ -18,18 +20,20 @@ defmodule Chatter.Gossip do
                      distribution_list: list(NetID.t),
                      payload: term )
 
-  @spec new(NetID.t, term) :: t
+  @spec new(NetID.t, Serializable.t) :: t
   def new(my_id, data)
-  when NetID.is_valid(my_id)
+  when NetID.is_valid(my_id) and
+       Serializable.is_valid(data)
   do
     gossip(current_id: BroadcastID.new(my_id)) |> gossip(payload: data)
   end
 
-  @spec new(NetID.t, integer, term) :: t
+  @spec new(NetID.t, integer, Serializable.t) :: t
   def new(my_id, seqno, data)
   when NetID.is_valid(my_id) and
        is_integer(seqno) and
-       seqno >= 0
+       seqno >= 0 and
+       Serializable.is_valid(data)
   do
     gossip(current_id: BroadcastID.new(my_id) |> BroadcastID.seqno(seqno))
     |> gossip(payload: data)
@@ -48,7 +52,7 @@ defmodule Chatter.Gossip do
           # distribution list
           is_list(:erlang.element(4, unquote(data))) and
           # payload
-          is_nil(:erlang.element(5, unquote(data))) == false
+          Serializable.is_valid(:erlang.element(5, unquote(data)))
         end
       false ->
         quote bind_quoted: binding() do
@@ -61,10 +65,38 @@ defmodule Chatter.Gossip do
           # distribution list
           is_list(:erlang.element(4, data)) and
           # payload
-          is_nil(:erlang.element(5, data)) == false
+          Serializable.is_valid(:erlang.element(5, data))
         end
     end
   end
+
+  defmacro is_valid_relaxed(data) do
+    case Macro.Env.in_guard?(__CALLER__) do
+      true ->
+        quote do
+          is_tuple(unquote(data)) and tuple_size(unquote(data)) == 5 and
+          :erlang.element(1, unquote(data)) == :gossip and
+          # broadcast id
+          BroadcastID.is_valid(:erlang.element(2, unquote(data))) and
+          # seen ids
+          is_list(:erlang.element(3, unquote(data))) and
+          # distribution list
+          is_list(:erlang.element(4, unquote(data)))
+        end
+      false ->
+        quote bind_quoted: binding() do
+          is_tuple(data) and tuple_size(data) == 5 and
+          :erlang.element(1, data) == :gossip and
+          # broadcast id
+          BroadcastID.is_valid(:erlang.element(2, data)) and
+          # seen ids
+          is_list(:erlang.element(3, data)) and
+          # distribution list
+          is_list(:erlang.element(4, data))
+        end
+    end
+  end
+
 
   @spec valid?(t) :: boolean
   def valid?(data)
@@ -105,16 +137,25 @@ defmodule Chatter.Gossip do
     gossip(g, :seen_ids)
   end
 
-  @spec payload(t) :: term
+  @spec payload(t) :: Serializable.t
   def payload(g)
   when is_valid(g)
   do
     gossip(g, :payload)
   end
 
-  @spec payload(t, term) :: t
+  @spec payload(t, Serializable.t) :: t
   def payload(g, pl)
-  when is_valid(g)
+  when is_valid(g) and
+       Serializable.is_valid(pl)
+  do
+    gossip(g, payload: pl)
+  end
+
+  @spec payload_relaxed(t, Serializable.t) :: t
+  def payload_relaxed(g, pl)
+  when is_valid_relaxed(g) and
+       Serializable.is_valid(pl)
   do
     gossip(g, payload: pl)
   end
@@ -213,10 +254,10 @@ defmodule Chatter.Gossip do
     {decoded_seen_ids, remaining}   = BroadcastID.decode_list_with(remaining, id_map)
     {decoded_distrib, remaining}    = NetID.decode_list_with(remaining, id_map)
 
-    { gossip(current_id: decoded_current_id)
-      |> gossip(seen_ids: decoded_seen_ids)
-      |> gossip(distribution_list: decoded_distrib)
-      |> gossip(payload: :empty),
+    { gossip([current_id: decoded_current_id,
+              seen_ids: decoded_seen_ids,
+              distribution_list: decoded_distrib,
+              payload: :empty]),
       remaining }
   end
 end

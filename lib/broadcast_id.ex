@@ -142,6 +142,13 @@ defmodule Chatter.BroadcastID do
     Enum.map(Map.keys(dict), fn(k) -> broadcast_id(origin: k) |> broadcast_id(seqno: Map.get(dict, k)) end)
   end
 
+  @spec extract_netids(t) :: list(NetID.t)
+  def extract_netids(id)
+  when is_valid(id)
+  do
+    [broadcast_id(id, :origin)]
+  end
+
   @spec encode_with(t, map) :: binary
   def encode_with(b, id_map)
   when is_valid(b) and

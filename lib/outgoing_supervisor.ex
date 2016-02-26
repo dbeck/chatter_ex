@@ -4,6 +4,7 @@ defmodule Chatter.OutgoingSupervisor do
   require Chatter.Gossip
   require Chatter.NetID
   require Chatter.BroadcastID
+  require Chatter.Serializable
   alias Chatter.OutgoingHandler
   alias Chatter.Gossip
   alias Chatter.NetID
