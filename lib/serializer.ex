@@ -3,10 +3,12 @@ defmodule Chatter.Serializer do
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
-  require Chatter.Serializable
+  require Chatter.EncoderDecoder
+  require Chatter.SerializerDB
   alias Chatter.Gossip
   alias Chatter.NetID
-  alias Chatter.Serializable
+  alias Chatter.EncoderDecoder
+  alias Chatter.SerializerDB
 
   @spec encode(Gossip.t, binary) :: binary
   def encode(gossip, key)
@@ -88,7 +90,8 @@ defmodule Chatter.Serializer do
   def encode_gossip(gossip)
   when Gossip.is_valid(gossip)
   do
-    ids = (extract_netids(gossip) ++ extract_netids(Gossip.payload(gossip)))
+    payload = Gossip.payload(gossip)
+    ids = (extract_netids(gossip) ++ extract_netids(payload))
     |> Enum.uniq
     id_table = NetID.encode_list(ids)
     {_count, id_map} = ids |> Enum.reduce({0, %{}}, fn(x,acc) ->
@@ -96,11 +99,13 @@ defmodule Chatter.Serializer do
       {count+1, Map.put(m, x, count)}
     end)
 
-    encoded_gossip  = Gossip.encode_with(gossip, id_map)
-    encoded_message = Serializable.encode_with(Gossip.payload(gossip), id_map)
+    encoded_gossip  = encode_with(gossip, id_map)
+    encoded_tag     = EncoderDecoder.to_code(payload) |> encode_uint
+    encoded_message = encode_with(payload, id_map)
 
     << id_table :: binary,
        encoded_gossip :: binary,
+       encoded_tag :: binary,
        encoded_message :: binary >>
   end
 
@@ -116,8 +121,9 @@ defmodule Chatter.Serializer do
       {count+1, Map.put(m, count, x)}
     end)
 
-    {decoded_gossip, remaining}   = Gossip.decode_with(remaining, id_map)
-    {decoded_message, remaining}  = Serializable.decode_with(remaining, id_map)
+    {decoded_gossip,  remaining}  = Gossip.decode_with(remaining, id_map)
+    {decoded_tag,     remaining}  = decode_uint(remaining)
+    {decoded_message, remaining}  = decode_with(remaining, decoded_tag, id_map)
 
     { Gossip.payload(decoded_gossip, decoded_message), remaining }
   end
@@ -166,15 +172,42 @@ defmodule Chatter.Serializer do
 
   defp decode_uint_(<<>>, val, _scale), do: val
 
-  defp extract_netids(serializable)
-  when Serializable.is_valid(serializable)
-  do
-    Serializable.extract_netids(serializable)
-  end
-
   defp extract_netids(gossip)
   when Gossip.is_valid(gossip)
   do
     Gossip.extract_netids(gossip)
+  end
+
+  defp extract_netids(obj)
+  when is_tuple(obj) and
+       tuple_size(obj) > 1
+  do
+    {:ok, encoder} = SerializerDB.get_(obj)
+    EncoderDecoder.extract_netids(encoder, obj)
+  end
+
+  defp encode_with(gossip, id_map)
+  when Gossip.is_valid(gossip) and
+       is_map(id_map)
+  do
+    Gossip.encode_with(gossip, id_map)
+  end
+
+  defp encode_with(obj, id_map)
+  when is_tuple(obj) and
+       tuple_size(obj) > 1 and
+       is_map(id_map)
+  do
+    {:ok, encoder} = SerializerDB.get_(obj)
+    EncoderDecoder.encode_with(encoder, obj, id_map)
+  end
+
+  defp decode_with(bin, tag, id_map)
+  when is_binary(bin) and
+       is_integer(tag) and
+       is_map(id_map)
+  do
+    {:ok, decoder} = SerializerDB.get_(tag)
+    EncoderDecoder.decode_with(decoder, bin, id_map)
   end
 end

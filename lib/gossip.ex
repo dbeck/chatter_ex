@@ -3,10 +3,8 @@ defmodule Chatter.Gossip do
   require Record
   require Chatter.BroadcastID
   require Chatter.NetID
-  require Chatter.Serializable
   alias Chatter.BroadcastID
   alias Chatter.NetID
-  alias Chatter.Serializable
 
   Record.defrecord :gossip,
                    current_id: nil,
@@ -18,22 +16,24 @@ defmodule Chatter.Gossip do
                      current_id: BroadcastID.t,
                      seen_ids: list(BroadcastID.t),
                      distribution_list: list(NetID.t),
-                     payload: term )
+                     payload: tuple )
 
-  @spec new(NetID.t, Serializable.t) :: t
+  @spec new(NetID.t, tuple) :: t
   def new(my_id, data)
   when NetID.is_valid(my_id) and
-       Serializable.is_valid(data)
+       is_tuple(data) and
+       tuple_size(data) > 1
   do
     gossip(current_id: BroadcastID.new(my_id)) |> gossip(payload: data)
   end
 
-  @spec new(NetID.t, integer, Serializable.t) :: t
+  @spec new(NetID.t, integer, tuple) :: t
   def new(my_id, seqno, data)
   when NetID.is_valid(my_id) and
        is_integer(seqno) and
        seqno >= 0 and
-       Serializable.is_valid(data)
+       is_tuple(data) and
+       tuple_size(data) > 1
   do
     gossip(current_id: BroadcastID.new(my_id) |> BroadcastID.seqno(seqno))
     |> gossip(payload: data)
@@ -52,7 +52,8 @@ defmodule Chatter.Gossip do
           # distribution list
           is_list(:erlang.element(4, unquote(data))) and
           # payload
-          Serializable.is_valid(:erlang.element(5, unquote(data)))
+          is_tuple(:erlang.element(5, unquote(data))) and
+          tuple_size(:erlang.element(5, unquote(data))) > 1
         end
       false ->
         quote bind_quoted: binding() do
@@ -65,7 +66,8 @@ defmodule Chatter.Gossip do
           # distribution list
           is_list(:erlang.element(4, data)) and
           # payload
-          Serializable.is_valid(:erlang.element(5, data))
+          is_tuple(:erlang.element(5, data)) and
+          tuple_size(:erlang.element(5, data)) > 1
         end
     end
   end
@@ -96,7 +98,6 @@ defmodule Chatter.Gossip do
         end
     end
   end
-
 
   @spec valid?(t) :: boolean
   def valid?(data)
@@ -137,25 +138,27 @@ defmodule Chatter.Gossip do
     gossip(g, :seen_ids)
   end
 
-  @spec payload(t) :: Serializable.t
+  @spec payload(t) :: tuple
   def payload(g)
   when is_valid(g)
   do
     gossip(g, :payload)
   end
 
-  @spec payload(t, Serializable.t) :: t
+  @spec payload(t, tuple) :: t
   def payload(g, pl)
   when is_valid(g) and
-       Serializable.is_valid(pl)
+       is_tuple(pl) and
+       tuple_size(pl) > 1
   do
     gossip(g, payload: pl)
   end
 
-  @spec payload_relaxed(t, Serializable.t) :: t
+  @spec payload_relaxed(t, tuple) :: t
   def payload_relaxed(g, pl)
   when is_valid_relaxed(g) and
-       Serializable.is_valid(pl)
+       is_tuple(pl) and
+       tuple_size(pl) > 1
   do
     gossip(g, payload: pl)
   end
