@@ -21,4 +21,12 @@ defmodule Chatter.EncoderDecoderTest do
     assert EncoderDecoder.valid?(dummy_serializable)
   end
 
+  # new
+  # valid?
+  # extract_netids
+  # encode_with
+  # decode_with
+  # to_code(tuple)
+  # to_code(atom)
+
 end

@@ -115,4 +115,6 @@ defmodule Chatter.SerializerTest do
     :ok = encode_and_decode(i)
     check_me(i-1)
   end
+
+  # serialize registered vs unregistered
 end

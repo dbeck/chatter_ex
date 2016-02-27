@@ -14,4 +14,7 @@ defmodule ChatterTest do
   test "multicast_netid() returns valid NetID" do
     assert NetID.valid?(Chatter.multicast_netid)
   end
+
+  # multicast_ttl
+  # group_manager_key
 end
