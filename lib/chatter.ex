@@ -3,7 +3,13 @@ defmodule Chatter do
   use Application
   require Logger
   require Chatter.NetID
+  require Chatter.BroadcastID
+  require Chatter.Gossip
   alias Chatter.NetID
+  alias Chatter.MulticastHandler
+  alias Chatter.OutgoingSupervisor
+  alias Chatter.PeerDB
+  alias Chatter.Gossip
 
   def start(_type, args)
   do
@@ -11,7 +17,50 @@ defmodule Chatter do
     Chatter.Supervisor.start_link(args)
   end
 
-    def get_local_ip
+  @spec broadcast(Gossip.t) :: :ok
+  def broadcast(gossip)
+  when Gossip.is_valid(gossip)
+  do
+    broadcast(Gossip.distribution_list(gossip), Gossip.payload(gossip))
+  end
+
+  @spec broadcast(list(NetID.t), tuple) :: :ok
+  def broadcast(distribution_list, tup)
+  when is_list(distribution_list) and
+       is_tuple(tup) and
+       tuple_size(tup) > 1
+  do
+    :ok = NetID.validate_list(distribution_list)
+    own_id = Chatter.local_netid
+    {:ok, seqno} = PeerDB.inc_broadcast_seqno(PeerDB.locate!, own_id)
+    {:ok, seen_ids} = PeerDB.get_seen_id_list_(own_id)
+
+    gossip = Gossip.new(own_id, seqno, tup)
+    |> Gossip.distribution_list(distribution_list)
+    |> Gossip.seen_ids(seen_ids)
+
+    ## Logger.debug "multicasting [#{inspect gossip}]"
+
+    # multicast first
+    :ok = MulticastHandler.send(MulticastHandler.locate!, gossip)
+
+    # the remaining list must be contacted directly
+    gossip =
+      Gossip.remove_from_distribution_list(gossip, Gossip.seen_netids(gossip))
+
+    # add 1 random elements to the distribution list from the original
+    # distribution list
+    gossip =
+      Gossip.add_to_distribution_list(gossip,
+                                      Enum.take_random(distribution_list, 1))
+
+    # outgoing handler uses its already open channels and returns the gossip
+    # what couldn't be delivered
+    :ok = OutgoingSupervisor.broadcast(gossip, Chatter.group_manager_key)
+  end
+
+
+  def get_local_ip
   do
     {:ok, list} = :inet.getif
     [{ip, _broadcast, _netmask}] = list
@@ -100,5 +149,4 @@ defmodule Chatter do
         retval
     end
   end
-
 end

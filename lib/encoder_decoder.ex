@@ -18,13 +18,29 @@ defmodule Chatter.EncoderDecoder do
                      encode_with: ((any, map) -> binary),
                      decode_with: ((binary, map) -> {any, binary}) )
 
-  @spec new(any, any, any, any) :: t
+  @spec new(atom, ((any) -> list(NetID.t)), ((any, map) -> binary), ((binary, map) -> {any, binary})) :: t
   def new(tag, extract_netids_fn, encode_with_fn, decode_with_fn)
   when is_atom(tag) and
        is_function(extract_netids_fn,1) and
        is_function(encode_with_fn,2) and
        is_function(decode_with_fn,2)
   do
+    encoder_decoder([tag: tag,
+                     code: to_code(tag),
+                     extract_netids: extract_netids_fn,
+                     encode_with: encode_with_fn,
+                     decode_with: decode_with_fn])
+  end
+
+  @spec new(tuple, ((any) -> list(NetID.t)), ((any, map) -> binary), ((binary, map) -> {any, binary})) :: t
+  def new(tup, extract_netids_fn, encode_with_fn, decode_with_fn)
+  when is_tuple(tup) and
+       tuple_size(tup) > 1 and
+       is_function(extract_netids_fn,1) and
+       is_function(encode_with_fn,2) and
+       is_function(decode_with_fn,2)
+  do
+    tag = :erlang.element(1, tup)
     encoder_decoder([tag: tag,
                      code: to_code(tag),
                      extract_netids: extract_netids_fn,
