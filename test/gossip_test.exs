@@ -4,7 +4,8 @@ defmodule Chatter.GossipTest do
   alias Chatter.Gossip
   alias Chatter.NetID
   alias Chatter.BroadcastID
-  alias Chatter.Serializable
+  alias Chatter.EncoderDecoder
+  alias Chatter.SerializerDB
 
   defp dummy_me do
     NetID.new({1,2,3,4},1)
@@ -15,7 +16,10 @@ defmodule Chatter.GossipTest do
     extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
     encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
     decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
-    Serializable.new(id, extract_fn, encode_fn, decode_fn)
+    encdec = EncoderDecoder.new(:erlang.element(1,id), extract_fn, encode_fn, decode_fn)
+    SerializerDB.add(SerializerDB.locate!, encdec)
+    {:ok, _encded} = SerializerDB.get(SerializerDB.locate!, id)
+    id
   end
 
   defp dummy_serializable_2 do
@@ -23,7 +27,10 @@ defmodule Chatter.GossipTest do
     extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
     encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
     decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
-    Serializable.new(id, extract_fn, encode_fn, decode_fn)
+    encdec = EncoderDecoder.new(:erlang.element(1,id), extract_fn, encode_fn, decode_fn)
+    SerializerDB.add(SerializerDB.locate!, encdec)
+    {:ok, _encded} = SerializerDB.get(SerializerDB.locate!, id)
+    id
   end
 
   test "basic test for new(netid, data)" do

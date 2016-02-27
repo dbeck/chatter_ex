@@ -125,7 +125,7 @@ defmodule Chatter.Serializer do
     {decoded_tag,     remaining}  = decode_uint(remaining)
     {decoded_message, remaining}  = decode_with(remaining, decoded_tag, id_map)
 
-    { Gossip.payload(decoded_gossip, decoded_message), remaining }
+    { Gossip.payload_relaxed(decoded_gossip, decoded_message), remaining }
   end
 
   @spec encode_uint(integer) :: binary

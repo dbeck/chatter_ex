@@ -5,12 +5,11 @@ defmodule Chatter.Supervisor do
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
-  require Chatter.Serializable
   alias Chatter.OutgoingSupervisor
   alias Chatter.MulticastHandler
   alias Chatter.PeerDB
+  alias Chatter.SerializerDB
   alias Chatter.Gossip
-  alias Chatter.Serializable
   alias Chatter.NetID
 
   def start_link(opts \\ [])
@@ -49,6 +48,7 @@ defmodule Chatter.Supervisor do
 
     children = [
       worker(PeerDB, [[], [name: PeerDB.id_atom()]]),
+      worker(SerializerDB, [[], [name: SerializerDB.id_atom()]]),
       listener_spec,
       supervisor(OutgoingSupervisor, [[], [name: OutgoingSupervisor.id_atom()]]),
       worker(MulticastHandler, [multicast_args, [name: MulticastHandler.id_atom()]])
@@ -64,17 +64,18 @@ defmodule Chatter.Supervisor do
     broadcast(Gossip.distribution_list(gossip), Gossip.payload(gossip))
   end
 
-  @spec broadcast(list(NetID.t), Serializable.t) :: :ok
-  def broadcast(distribution_list, ser)
+  @spec broadcast(list(NetID.t), tuple) :: :ok
+  def broadcast(distribution_list, tup)
   when is_list(distribution_list) and
-       Serializable.is_valid(ser)
+       is_tuple(tup) and
+       tuple_size(tup) > 1
   do
     :ok = NetID.validate_list(distribution_list)
     own_id = Chatter.local_netid
     {:ok, seqno} = PeerDB.inc_broadcast_seqno(PeerDB.locate!, own_id)
     {:ok, seen_ids} = PeerDB.get_seen_id_list_(own_id)
 
-    gossip = Gossip.new(own_id, seqno, ser)
+    gossip = Gossip.new(own_id, seqno, tup)
     |> Gossip.distribution_list(distribution_list)
     |> Gossip.seen_ids(seen_ids)
 

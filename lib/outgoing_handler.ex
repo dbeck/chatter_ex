@@ -4,7 +4,6 @@ defmodule Chatter.OutgoingHandler do
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
-  require Chatter.Serializable
   require Logger
   alias Chatter.Gossip
   alias Chatter.NetID

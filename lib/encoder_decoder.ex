@@ -21,9 +21,9 @@ defmodule Chatter.EncoderDecoder do
   @spec new(any, any, any, any) :: t
   def new(tag, extract_netids_fn, encode_with_fn, decode_with_fn)
   when is_atom(tag) and
-       is_function(extract_netids_fn) and
-       is_function(encode_with_fn) and
-       is_function(decode_with_fn)
+       is_function(extract_netids_fn,1) and
+       is_function(encode_with_fn,2) and
+       is_function(decode_with_fn,2)
   do
     encoder_decoder([tag: tag,
                      code: to_code(tag),
@@ -36,11 +36,10 @@ defmodule Chatter.EncoderDecoder do
     case Macro.Env.in_guard?(__CALLER__) do
       true ->
         quote do
-          is_tuple(unquote(data)) and tuple_size(unquote(data)) == 5 and
+          is_tuple(unquote(data)) and tuple_size(unquote(data)) == 6 and
           :erlang.element(1, unquote(data)) == :encoder_decoder and
           # data
-          is_nil(:erlang.element(2, unquote(data))) == false and
-          is_tuple(:erlang.element(2, unquote(data))) and
+          is_atom(:erlang.element(2, unquote(data))) and
           # code
           is_integer(:erlang.element(3, unquote(data))) and
           # extract_netids
@@ -52,11 +51,10 @@ defmodule Chatter.EncoderDecoder do
         end
       false ->
         quote bind_quoted: binding() do
-          is_tuple(data) and tuple_size(data) == 5 and
+          is_tuple(data) and tuple_size(data) == 6 and
           :erlang.element(1, data) == :encoder_decoder and
           # data
-          is_nil(:erlang.element(2, data)) == false and
-          is_tuple(:erlang.element(2, data)) and
+          is_atom(:erlang.element(2, data)) == false and
           # code
           is_integer(:erlang.element(3, data)) and
           # extract_netids
