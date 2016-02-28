@@ -1,8 +1,8 @@
 defmodule Chatter.SerializerDB do
 
   use ExActor.GenServer
-  require Chatter.EncoderDecoder
-  alias Chatter.EncoderDecoder
+  require Chatter.MessageHandler
+  alias Chatter.MessageHandler
 
   defstart start_link([], opts),
     gen_server_opts: opts
@@ -16,7 +16,7 @@ defmodule Chatter.SerializerDB do
 
   def add(pid, encdec)
   when is_pid(pid) and
-       EncoderDecoder.is_valid(encdec)
+       MessageHandler.is_valid(encdec)
   do
     GenServer.cast(pid, {:add, encdec})
   end
@@ -26,14 +26,14 @@ defmodule Chatter.SerializerDB do
        is_tuple(obj) and
        tuple_size(obj) > 1
   do
-  	get(pid, EncoderDecoder.to_code(obj))
+  	get(pid, MessageHandler.to_code(obj))
   end
 
   def get(pid, tag)
   when is_pid(pid) and
        is_atom(tag)
   do
-  	get(pid, EncoderDecoder.to_code(tag))
+  	get(pid, MessageHandler.to_code(tag))
   end
 
   def get(pid, code)
@@ -52,13 +52,13 @@ defmodule Chatter.SerializerDB do
   when is_tuple(obj) and
        tuple_size(obj) > 1
   do
-  	EncoderDecoder.to_code(obj) |> get_
+  	MessageHandler.to_code(obj) |> get_
   end
 
   def get_(tag)
   when is_atom(tag)
   do
-  	EncoderDecoder.to_code(tag) |> get_
+  	MessageHandler.to_code(tag) |> get_
   end
 
   def get_(code)
@@ -77,7 +77,7 @@ defmodule Chatter.SerializerDB do
   defcast stop, do: stop_server(:normal)
 
   def handle_cast({:add, encdec}, table)
-  when EncoderDecoder.is_valid(encdec)
+  when MessageHandler.is_valid(encdec)
   do
     :ets.insert_new(table, encdec)
     {:noreply, table}

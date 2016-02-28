@@ -1,4 +1,4 @@
-defmodule Chatter.EncoderDecoder do
+defmodule Chatter.MessageHandler do
 
   require Record
   require Chatter.NetID

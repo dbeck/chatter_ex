@@ -7,7 +7,7 @@ defmodule Chatter.MulticastHandler do
   require Logger
   alias Chatter.Gossip
   alias Chatter.PeerDB
-  alias GroupManager.Receiver
+  # alias GroupManager.Receiver
   alias Chatter.NetID
   alias Chatter.Serializer
   alias Chatter.BroadcastID

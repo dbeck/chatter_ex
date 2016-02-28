@@ -7,7 +7,7 @@ defmodule Chatter.IncomingHandler do
   alias Chatter.Gossip
   alias Chatter.PeerDB
   alias Chatter
-  alias GroupManager.Receiver
+  # alias GroupManager.Receiver
   alias Chatter.NetID
   alias Chatter.Serializer
 

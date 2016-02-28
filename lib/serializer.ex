@@ -3,11 +3,11 @@ defmodule Chatter.Serializer do
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
-  require Chatter.EncoderDecoder
+  require Chatter.MessageHandler
   require Chatter.SerializerDB
   alias Chatter.Gossip
   alias Chatter.NetID
-  alias Chatter.EncoderDecoder
+  alias Chatter.MessageHandler
   alias Chatter.SerializerDB
 
   @spec encode(Gossip.t, binary) :: binary
@@ -30,7 +30,7 @@ defmodule Chatter.Serializer do
        compressed :: binary
     >>
 
-    {_new_state, encrypted} = :crypto.stream_init(:aes_ctr, key, "- GroupManager -")
+    {_new_state, encrypted} = :crypto.stream_init(:aes_ctr, key, "-- ScaleSmall --")
     |> :crypto.stream_encrypt(to_encrypt)
 
     << 0xff :: size(8), encrypted :: binary >>
@@ -42,7 +42,7 @@ defmodule Chatter.Serializer do
        is_binary(key) and
        byte_size(key) == 32
   do
-    {_new_state, decrypted} = :crypto.stream_init(:aes_ctr, key, "- GroupManager -")
+    {_new_state, decrypted} = :crypto.stream_init(:aes_ctr, key, "-- ScaleSmall --")
     |> :crypto.stream_decrypt(encrypted)
 
     << _ :: size(64), _ :: size(64), _ :: size(64), _ :: size(64),
@@ -100,7 +100,7 @@ defmodule Chatter.Serializer do
     end)
 
     encoded_gossip  = encode_with(gossip, id_map)
-    encoded_tag     = EncoderDecoder.to_code(payload) |> encode_uint
+    encoded_tag     = MessageHandler.to_code(payload) |> encode_uint
     encoded_message = encode_with(payload, id_map)
 
     << id_table :: binary,
@@ -183,7 +183,7 @@ defmodule Chatter.Serializer do
        tuple_size(obj) > 1
   do
     {:ok, encoder} = SerializerDB.get_(obj)
-    EncoderDecoder.extract_netids(encoder, obj)
+    MessageHandler.extract_netids(encoder, obj)
   end
 
   defp encode_with(gossip, id_map)
@@ -199,7 +199,7 @@ defmodule Chatter.Serializer do
        is_map(id_map)
   do
     {:ok, encoder} = SerializerDB.get_(obj)
-    EncoderDecoder.encode_with(encoder, obj, id_map)
+    MessageHandler.encode_with(encoder, obj, id_map)
   end
 
   defp decode_with(bin, tag, id_map)
@@ -208,6 +208,6 @@ defmodule Chatter.Serializer do
        is_map(id_map)
   do
     {:ok, decoder} = SerializerDB.get_(tag)
-    EncoderDecoder.decode_with(decoder, bin, id_map)
+    MessageHandler.decode_with(decoder, bin, id_map)
   end
 end
