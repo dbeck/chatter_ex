@@ -79,7 +79,7 @@ defmodule Chatter.SerializerDB do
   def handle_cast({:add, encdec}, table)
   when MessageHandler.is_valid(encdec)
   do
-    :ets.insert_new(table, encdec)
+    :ets.insert(table, encdec)
     {:noreply, table}
   end
 

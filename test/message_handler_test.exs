@@ -14,7 +14,12 @@ defmodule Chatter.MessageHandlerTest do
     extract_fn  = fn(id) -> BroadcastID.extract_netids(id) end
     encode_fn   = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
     decode_fn   = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
-    MessageHandler.new(:erlang.element(1,id), extract_fn, encode_fn, decode_fn)
+    dispatch_fn = fn(id) -> {:ok, id} end
+    MessageHandler.new(id,
+                       extract_fn,
+                       encode_fn,
+                       decode_fn,
+                       dispatch_fn)
   end
 
   test "basic test for new" do

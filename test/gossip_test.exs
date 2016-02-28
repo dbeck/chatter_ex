@@ -13,10 +13,11 @@ defmodule Chatter.GossipTest do
 
   defp dummy_serializable do
     id = BroadcastID.new(dummy_me, 111)
-    extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
-    encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
-    decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
-    encdec = MessageHandler.new(:erlang.element(1,id), extract_fn, encode_fn, decode_fn)
+    extract_fn   = fn(id) -> BroadcastID.extract_netids(id) end
+    encode_fn    = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
+    decode_fn    = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
+    dispatch_fn  = fn(id) -> {:ok, id} end
+    encdec = MessageHandler.new(id, extract_fn, encode_fn, decode_fn, dispatch_fn)
     SerializerDB.add(SerializerDB.locate!, encdec)
     {:ok, _encded} = SerializerDB.get(SerializerDB.locate!, id)
     id
@@ -24,10 +25,11 @@ defmodule Chatter.GossipTest do
 
   defp dummy_serializable_2 do
     id = BroadcastID.new(dummy_me, 345)
-    extract_fn = fn(id) -> BroadcastID.extract_netids(id) end
-    encode_fn  = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
-    decode_fn = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
-    encdec = MessageHandler.new(:erlang.element(1,id), extract_fn, encode_fn, decode_fn)
+    extract_fn   = fn(id) -> BroadcastID.extract_netids(id) end
+    encode_fn    = fn(id, ids) -> BroadcastID.encode_with(id, ids) end
+    decode_fn    = fn(bin, ids) -> BroadcastID.decode_with(bin, ids) end
+    dispatch_fn  = fn(id) -> {:ok, id} end
+    encdec = MessageHandler.new(id, extract_fn, encode_fn, decode_fn, dispatch_fn)
     SerializerDB.add(SerializerDB.locate!, encdec)
     {:ok, _encded} = SerializerDB.get(SerializerDB.locate!, id)
     id

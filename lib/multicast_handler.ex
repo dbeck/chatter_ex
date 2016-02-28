@@ -7,10 +7,11 @@ defmodule Chatter.MulticastHandler do
   require Logger
   alias Chatter.Gossip
   alias Chatter.PeerDB
-  # alias GroupManager.Receiver
   alias Chatter.NetID
   alias Chatter.Serializer
+  alias Chatter.SerializerDB
   alias Chatter.BroadcastID
+  alias Chatter.MessageHandler
 
   defstart start_link([own_id:        own_id,
                        multicast_id:  multi_id,
@@ -85,13 +86,16 @@ defmodule Chatter.MulticastHandler do
         PeerDB.add_seen_id(peer_db,
                            BroadcastID.new(own_id, my_seqno),
                            Gossip.current_id(gossip))
+
         # register whom the peer have seen
         PeerDB.add_seen_id_list(peer_db,
                                 Gossip.current_id(gossip),
                                 Gossip.seen_ids(gossip))
 
+        {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
+
         ## Logger.debug "received on multicast [#{inspect gossip}] size=[#{byte_size data}]"
-        {:ok, _} = Receiver.handle(Receiver.locate!, Gossip.payload(gossip))
+        {:ok, _} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
       {:error, :invalid_data, _}
         -> :error

@@ -7,9 +7,10 @@ defmodule Chatter.IncomingHandler do
   alias Chatter.Gossip
   alias Chatter.PeerDB
   alias Chatter
-  # alias GroupManager.Receiver
   alias Chatter.NetID
   alias Chatter.Serializer
+  alias Chatter.SerializerDB
+  alias Chatter.MessageHandler
 
   def start_link(ref, socket, transport, opts) do
     pid = spawn_link(__MODULE__, :init, [ref, socket, transport, opts])
@@ -51,8 +52,10 @@ defmodule Chatter.IncomingHandler do
                                     Gossip.current_id(gossip),
                                     Gossip.seen_ids(gossip))
 
+            {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
+
             ## Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"
-            {:ok, new_message} = Receiver.handle(Receiver.locate!, Gossip.payload(gossip))
+            {:ok, new_message} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
             # make sure we pass the message forward with the modified payload
             :ok = Chatter.broadcast(gossip |> Gossip.payload(new_message))
