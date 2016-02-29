@@ -1,5 +1,9 @@
 defmodule Chatter do
 
+  @moduledoc """
+
+  """
+
   use Application
   require Logger
   require Chatter.NetID
@@ -9,6 +13,7 @@ defmodule Chatter do
   alias Chatter.MulticastHandler
   alias Chatter.OutgoingSupervisor
   alias Chatter.PeerDB
+  alias Chatter.SerializerDB
   alias Chatter.Gossip
 
   def start(_type, args)
@@ -31,6 +36,10 @@ defmodule Chatter do
        tuple_size(tup) > 1
   do
     :ok = NetID.validate_list(distribution_list)
+
+    # verify that the payload serializer has already registered
+    {:ok, _handler} = SerializerDB.get_(tup)
+
     own_id = Chatter.local_netid
     {:ok, seqno} = PeerDB.inc_broadcast_seqno(PeerDB.locate!, own_id)
     {:ok, seen_ids} = PeerDB.get_seen_id_list_(own_id)
@@ -48,7 +57,7 @@ defmodule Chatter do
     gossip =
       Gossip.remove_from_distribution_list(gossip, Gossip.seen_netids(gossip))
 
-    # add 1 random elements to the distribution list from the original
+    # add 1 random element to the distribution list from the original
     # distribution list
     gossip =
       Gossip.add_to_distribution_list(gossip,
@@ -58,7 +67,6 @@ defmodule Chatter do
     # what couldn't be delivered
     :ok = OutgoingSupervisor.broadcast(gossip, Chatter.group_manager_key)
   end
-
 
   def get_local_ip
   do
