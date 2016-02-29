@@ -1,0 +1,4 @@
+%{"exactor": {:hex, :exactor, "2.2.0"},
+  "ranch": {:hex, :ranch, "1.2.1"},
+  "snappy": {:hex, :snappy, "1.1.1"},
+  "xxhash": {:git, "https://github.com/pierresforge/erlang-xxhash", "9b2f35040395f590524ebeccfa65dd52adebbd60", []}}

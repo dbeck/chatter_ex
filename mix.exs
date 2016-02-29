@@ -4,9 +4,7 @@ defmodule Chatter.Mixfile do
   def project do
     [
       app: :chatter,
-      version: "0.0.6",
-      deps_path: "../../deps",
-      lockfile: "../../mix.lock",
+      version: "0.0.1",
       elixir: "~> 1.1",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
