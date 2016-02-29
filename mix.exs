@@ -39,7 +39,7 @@ defmodule Chatter.Mixfile do
 
   defp package do
     [
-     files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*", "test"],
+     files: ["lib", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["David Beck"],
      licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/dbeck/chatter_ex",
