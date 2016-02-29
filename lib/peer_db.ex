@@ -93,6 +93,12 @@ defmodule Chatter.PeerDB do
     end
   end
 
+  def get_peers_()
+  do
+    name = id_atom()
+    :ets.foldl(fn(e, acc) -> [PeerData.id(e)|acc] end, [], name)
+  end
+
   # GenServer
 
   defcast stop, do: stop_server(:normal)

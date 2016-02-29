@@ -1,7 +1,11 @@
 defmodule Chatter do
 
   @moduledoc """
+  `Chatter` allows broadcasting information between a set of nodes. Nodes are identified by
+  the `Chatter.NetID` record, which contains an IPv4 address and a port.
 
+
+  TODO
   """
 
   use Application
@@ -22,6 +26,9 @@ defmodule Chatter do
     Chatter.Supervisor.start_link(args)
   end
 
+  @doc """
+  TODO
+  """
   @spec broadcast(Gossip.t) :: :ok
   def broadcast(gossip)
   when Gossip.is_valid(gossip)
@@ -29,6 +36,9 @@ defmodule Chatter do
     broadcast(Gossip.distribution_list(gossip), Gossip.payload(gossip))
   end
 
+  @doc """
+  TODO
+  """
   @spec broadcast(list(NetID.t), tuple) :: :ok
   def broadcast(distribution_list, tup)
   when is_list(distribution_list) and
@@ -68,6 +78,30 @@ defmodule Chatter do
     :ok = OutgoingSupervisor.broadcast(gossip, Chatter.group_manager_key)
   end
 
+  @doc """
+  Return the list of peers `Chatter` has ever seen. The list omits the local
+  `NetID` even though PeerDB has an entry for it.
+
+  ```
+  iex(1)> Chatter.peers
+  [{:net_id, {192, 168, 1, 100}, 29999}]
+
+  ```
+  """
+  def peers()
+  do
+    my_id = local_netid
+    PeerDB.get_peers_() |> Enum.filter(fn(x) -> x != my_id end)
+  end
+
+  @doc """
+  Returns the local IPv4 address in the form of a tuple.
+
+  ```
+    iex(1)> Chatter.get_local_ip
+    {192, 168, 1, 100}
+  ```
+  """
   def get_local_ip
   do
     {:ok, list} = :inet.getif
@@ -77,6 +111,20 @@ defmodule Chatter do
     ip
   end
 
+  @doc """
+  Returns the local node's `NetID`. This function uses the following configuration values:
+
+  - :chatter / :my_addr
+  - :chatter / :my_port
+
+  If none of these are available, the local IPv4 address will be determined by
+  the `Chatter.get_local_ip` function and the port will be defaulted to `29999`.
+
+  ```
+  iex(1)> Chatter.local_netid
+  {:net_id, {192, 168, 1, 100}, 29998}
+  ```
+  """
   def local_netid
   do
     # try to figure our local IP if not given
@@ -101,6 +149,20 @@ defmodule Chatter do
     NetID.new(my_addr, my_port)
   end
 
+  @doc """
+  Returns the local node's UDP multicast `NetID`. This function uses the following configuration values:
+
+  - :chatter / :multicast_addr
+  - :chatter / :multicast_port
+
+  If none of these are available, the UDP multicast address will be `224.1.1.1` by default
+  and the port will be defaulted to `29999`.
+
+  ```
+  iex(1)> Chatter.multicast_netid
+  {:net_id, {224, 1, 1, 1}, 29999}
+  ```
+  """
   def multicast_netid
   do
     mcast_addr_str = case Application.fetch_env(:chatter, :multicast_addr)
@@ -127,6 +189,19 @@ defmodule Chatter do
     NetID.new(multicast_addr, multicast_port)
   end
 
+  @doc """
+  Returns the local node's UDP multicast TTL value. This function uses the following configuration value:
+
+  - :chatter / :multicast_ttl
+
+  If no confifuration value is available, the default is `4`.
+
+  ```
+  iex(1)> Chatter.multicast_ttl
+  4
+
+  ```
+  """
   def multicast_ttl
   do
     case Application.fetch_env(:chatter, :multicast_ttl)
@@ -140,6 +215,14 @@ defmodule Chatter do
     end
   end
 
+  @doc """
+  Returns the local node's encryption key. This function uses the following configuration value:
+
+  - :chatter / :key
+
+  The encryption key needs to be 32 characters long. The longer key will be chopped, the shorter key
+  will be concatenated with `01234567890123456789012345678901` and then chopped to 32 characters.
+  """
   def group_manager_key
   do
     case Application.fetch_env(:chatter, :key)
