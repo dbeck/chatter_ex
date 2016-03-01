@@ -73,35 +73,39 @@ defmodule Chatter.MulticastHandler do
   do
     [socket: _socket, own_id: own_id, multicast_id: _multi_id, key: key] = state
     # process data
-    case Serializer.decode(data, key)
-    do
-      {:ok, gossip} ->
-        peer_db = PeerDB.locate!
+    try do
+      case Serializer.decode(data, key)
+      do
+        {:ok, gossip} ->
+          peer_db = PeerDB.locate!
 
-        my_seqno = case PeerDB.get_broadcast_seqno_(own_id) do
-          {:ok, tmp_seqno} -> tmp_seqno
-          {:error, _} -> 0
-        end
+          my_seqno = case PeerDB.get_broadcast_seqno_(own_id) do
+            {:ok, tmp_seqno} -> tmp_seqno
+            {:error, _} -> 0
+          end
 
-        # register that we have seen the peer
-        PeerDB.add_seen_id(peer_db,
-                           BroadcastID.new(own_id, my_seqno),
-                           Gossip.current_id(gossip))
+          # register that we have seen the peer
+          PeerDB.add_seen_id(peer_db,
+                             BroadcastID.new(own_id, my_seqno),
+                             Gossip.current_id(gossip))
 
-        # register whom the peer have seen
-        PeerDB.add_seen_id_list(peer_db,
-                                Gossip.current_id(gossip),
-                                Gossip.seen_ids(gossip))
+          # register whom the peer have seen
+          PeerDB.add_seen_id_list(peer_db,
+                                  Gossip.current_id(gossip),
+                                  Gossip.seen_ids(gossip))
 
-        {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
+          {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
 
-        Logger.debug "received on multicast [#{inspect gossip}] size=[#{byte_size data}]"
-        {:ok, _} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
+          ## Logger.debug "received on multicast [#{inspect gossip}] size=[#{byte_size data}]"
+          {:ok, _} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
-      {:error, :invalid_data, _}
-        -> :error
+        {:error, :invalid_data, _}
+          -> :error
+      end
+    rescue
+      MatchError -> Logger.error "MatchError: cannot decode packet size=[#{byte_size data}]"
+      _ -> Logger.error "Unexpected Error: cannot decode packet size=[#{byte_size data}]"
     end
-
     # when we popped one message we allow one more to be buffered
     :inet.setopts(socket, [active: 1])
     {:noreply, state}

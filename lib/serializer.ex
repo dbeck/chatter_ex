@@ -1,5 +1,6 @@
 defmodule Chatter.Serializer do
 
+  require Logger
   require Chatter.Gossip
   require Chatter.BroadcastID
   require Chatter.NetID
@@ -54,6 +55,7 @@ defmodule Chatter.Serializer do
       {:error, :data_not_compressed} ->
         cond do
           cksum != :xxhash.hash32(msg) ->
+            Logger.error "invalid data, cksum mismatch"
             {:error, :invalid_data, :cksum_error_not_compressed}
 
           true ->
@@ -62,6 +64,7 @@ defmodule Chatter.Serializer do
             do
               {:ok, gossip}
             else
+              Logger.error "invalid data, Gossip not valid"
               {:error, :invalid_data, :failed_to_decode_uncompressed}
             end
         end
@@ -69,6 +72,7 @@ defmodule Chatter.Serializer do
       {:ok, decomp} ->
         cond do
           cksum != :xxhash.hash32(decomp) ->
+            Logger.error "invalid data, cksum mismatch"
             {:error, :invalid_data, :cksum_error}
 
           true ->
@@ -77,11 +81,13 @@ defmodule Chatter.Serializer do
             do
               {:ok, gossip}
             else
+              Logger.error "invalid data, Gossip not valid"
               {:error, :invalid_data, :failed_to_decode}
             end
         end
 
       {:error, :corrupted_data} ->
+        Logger.error "invalid data, currupted data, cannot decompress"
         {:error, :invalid_data, :corrupted_data}
     end
   end
@@ -182,8 +188,13 @@ defmodule Chatter.Serializer do
   when is_tuple(obj) and
        tuple_size(obj) > 1
   do
-    {:ok, encoder} = SerializerDB.get_(obj)
-    MessageHandler.extract_netids(encoder, obj)
+    case SerializerDB.get_(obj)
+    do
+      {:ok, extractor} ->
+        MessageHandler.extract_netids(extractor, obj)
+      other_value ->
+        {:error, :invalid_extractor, other_value}
+    end
   end
 
   defp encode_with(gossip, id_map)
@@ -198,8 +209,13 @@ defmodule Chatter.Serializer do
        tuple_size(obj) > 1 and
        is_map(id_map)
   do
-    {:ok, encoder} = SerializerDB.get_(obj)
-    MessageHandler.encode_with(encoder, obj, id_map)
+    case SerializerDB.get_(obj)
+    do
+      {:ok, encoder} ->
+        MessageHandler.encode_with(encoder, obj, id_map)
+      other_value ->
+        {:error, :invalid_encoder, other_value}
+    end
   end
 
   defp decode_with(bin, tag, id_map)
@@ -207,7 +223,12 @@ defmodule Chatter.Serializer do
        is_integer(tag) and
        is_map(id_map)
   do
-    {:ok, decoder} = SerializerDB.get_(tag)
-    MessageHandler.decode_with(decoder, bin, id_map)
+    case SerializerDB.get_(tag)
+    do
+      {:ok, decoder} ->
+        MessageHandler.decode_with(decoder, bin, id_map)
+      other_value ->
+        {:error, :invalid_decoder, other_value}
+    end
   end
 end

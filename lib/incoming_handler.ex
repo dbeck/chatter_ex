@@ -42,28 +42,34 @@ defmodule Chatter.IncomingHandler do
     case transport.recv(socket, 0, 5000) do
       {:ok, data} ->
         # process data
-        case Serializer.decode(data, key)
-        do
-          {:ok, gossip} ->
-            peer_db = PeerDB.locate!
+        try do
+          case Serializer.decode(data, key)
+          do
+            {:ok, gossip} ->
+              peer_db = PeerDB.locate!
 
-            # register whom the peer have seen
-            PeerDB.add_seen_id_list(peer_db,
-                                    Gossip.current_id(gossip),
-                                    Gossip.seen_ids(gossip))
+              # register whom the peer have seen
+              PeerDB.add_seen_id_list(peer_db,
+                                      Gossip.current_id(gossip),
+                                      Gossip.seen_ids(gossip))
 
-            {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
+              {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
 
-            Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"
-            {:ok, new_message} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
+              ## Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"
+              {:ok, new_message} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
-            # make sure we pass the message forward with the modified payload
-            :ok = Chatter.broadcast(gossip |> Gossip.payload(new_message))
+              # make sure we pass the message forward with the modified payload
+              :ok = Chatter.broadcast(gossip |> Gossip.payload(new_message))
 
-            loop(socket, transport, own_id, timeout_seconds, 0, key)
+              loop(socket, transport, own_id, timeout_seconds, 0, key)
 
-          {:error, :invalid_data, _} ->
-            :ok = transport.close(socket)
+            {:error, :invalid_data, _} ->
+              :ok = transport.close(socket)
+          end
+        rescue
+          MatchError -> Logger.error "MatchError: cannot decode packet size=[#{byte_size data}]. closing TCP connection"
+          _ -> Logger.error "Unexpected Error: cannot decode packet size=[#{byte_size data}]. closing TCP connection"
+          :ok = transport.close(socket)
         end
 
       {:error, :timeout} ->
