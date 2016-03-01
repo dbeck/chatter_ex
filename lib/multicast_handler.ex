@@ -95,7 +95,7 @@ defmodule Chatter.MulticastHandler do
 
         {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
 
-        ## Logger.debug "received on multicast [#{inspect gossip}] size=[#{byte_size data}]"
+        Logger.debug "received on multicast [#{inspect gossip}] size=[#{byte_size data}]"
         {:ok, _} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
       {:error, :invalid_data, _}

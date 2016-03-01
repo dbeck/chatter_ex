@@ -54,7 +54,7 @@ defmodule Chatter.IncomingHandler do
 
             {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
 
-            ## Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"
+            Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"
             {:ok, new_message} = MessageHandler.dispatch(handler, Gossip.payload(gossip))
 
             # make sure we pass the message forward with the modified payload

@@ -14,6 +14,7 @@ defmodule Chatter do
   require Chatter.BroadcastID
   require Chatter.Gossip
   alias Chatter.NetID
+  alias Chatter.BroadcastID
   alias Chatter.MulticastHandler
   alias Chatter.OutgoingSupervisor
   alias Chatter.PeerDB
@@ -61,9 +62,9 @@ defmodule Chatter do
       do
         {:ok, []} -> acc
         {:ok, lst} ->
-          if Enum.any?(lst, fn(xx) -> BroadcastID.origin(xx) == own_id end)
+          if Enum.any?(lst, fn(t) -> BroadcastID.origin(t) == own_id end)
           do
-            [BroadcastID.origin(x)|acc]
+            [x|acc]
           else
             acc
           end
