@@ -96,7 +96,15 @@ defmodule Chatter.PeerDB do
   def get_peers_()
   do
     name = id_atom()
-    :ets.foldl(fn(e, acc) -> [PeerData.id(e)|acc] end, [], name)
+    map = :ets.foldl(fn(e, acc) ->
+      acc = Map.put(acc, PeerData.id(e),0)
+      acc = PeerData.seen_ids(e) |> Enum.reduce(acc, fn(x,v) ->
+        v = Map.put(v, BroadcastID.origin(x), 0)
+      end)
+    end,
+    %{},
+    name)
+    Map.keys(map)
   end
 
   # GenServer

@@ -77,6 +77,7 @@ defmodule Chatter.MulticastHandler do
     do
       {:ok, gossip} ->
         peer_db = PeerDB.locate!
+
         my_seqno = case PeerDB.get_broadcast_seqno_(own_id) do
           {:ok, tmp_seqno} -> tmp_seqno
           {:error, _} -> 0
