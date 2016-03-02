@@ -4,7 +4,6 @@ defmodule Chatter do
   `Chatter` allows broadcasting information between a set of nodes. Nodes are identified by
   the `Chatter.NetID` record, which contains an IPv4 address and a port.
 
-
   TODO
   """
 
