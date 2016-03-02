@@ -79,18 +79,12 @@ defmodule Chatter.MulticastHandler do
         {:ok, gossip} ->
           peer_db = PeerDB.locate!
 
-          my_seqno = case PeerDB.get_broadcast_seqno_(own_id) do
-            {:ok, tmp_seqno} -> tmp_seqno
-            {:error, _} -> 0
-          end
-
           # register that we have seen the peer
-          PeerDB.add_seen_id(peer_db,
-                             BroadcastID.new(own_id, my_seqno),
-                             Gossip.current_id(gossip))
+          PeerDB.local_seen_peer(peer_db,
+                                 Gossip.current_id(gossip))
 
-          # register whom the peer have seen
-          PeerDB.add_seen_id_list(peer_db,
+          # register whom the peer has seen
+          PeerDB.peer_seen_others(peer_db,
                                   Gossip.current_id(gossip),
                                   Gossip.seen_ids(gossip))
 

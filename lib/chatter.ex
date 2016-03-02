@@ -51,25 +51,15 @@ defmodule Chatter do
     {:ok, _handler} = SerializerDB.get_(tup)
 
     own_id = Chatter.local_netid
-    {:ok, seqno} = PeerDB.inc_broadcast_seqno(PeerDB.locate!, own_id)
-    {:ok, seen_ids} = PeerDB.get_seen_id_list_(own_id)
+    db_pid = PeerDB.locate!
+    {:ok, seqno} = PeerDB.inc_broadcast_seqno(db_pid)
+    {:ok, seen_ids} = PeerDB.get_senders(db_pid)
 
-    # build a reverse seen ID list of who has seen us
-    # TODO : optimize this?
-    rev_seen_ids = distribution_list |> Enum.reduce([], fn(x, acc) ->
-      case PeerDB.get_seen_id_list_(x)
-      do
-        {:ok, []} -> acc
-        {:ok, lst} ->
-          if Enum.any?(lst, fn(t) -> BroadcastID.origin(t) == own_id end)
-          do
-            [x|acc]
-          else
-            acc
-          end
-        _ -> acc
-      end
-    end)
+    peers_seen_us = case PeerDB.get_seen_id_list_(own_id) do
+      {:ok, peer_list} ->
+        peer_list |> Enum.reduce([], fn(x,acc) -> [BroadcastID.origin(x)|acc] end)
+      {:error, :not_found} -> []
+    end
 
     gossip = Gossip.new(own_id, seqno, tup)
     |> Gossip.distribution_list(distribution_list)
@@ -82,7 +72,7 @@ defmodule Chatter do
 
     # the remaining list must be contacted directly
     gossip =
-      Gossip.remove_from_distribution_list(gossip, rev_seen_ids)
+      Gossip.remove_from_distribution_list(gossip, peers_seen_us)
 
     # add 1 random element to the distribution list from the original
     # distribution list

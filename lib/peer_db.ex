@@ -13,46 +13,41 @@ defmodule Chatter.PeerDB do
   do
     name = Keyword.get(opts, :name, id_atom())
     table = :ets.new(name, [:named_table, :set, :protected, {:keypos, 2}])
-    initial_state(table)
+    initial_state(
+      [
+        received_from: PeerData.new(Chatter.local_netid),
+        can_send_to: table
+      ])
   end
 
   # Convenience API
 
-  def add(pid, id)
-  when is_pid(pid) and
-       NetID.is_valid(id)
+  def get_senders(pid)
+  when is_pid(pid)
   do
-    GenServer.cast(pid, {:add, id})
+    GenServer.call(pid, {:get_senders})
   end
 
-  def get(pid, id)
+  def local_seen_peer(pid, seen_id)
   when is_pid(pid) and
-       NetID.is_valid(id)
-  do
-    GenServer.call(pid, {:get, id})
-  end
-
-  def add_seen_id(pid, current_id, seen_id)
-  when is_pid(pid) and
-       BroadcastID.is_valid(current_id) and
        BroadcastID.is_valid(seen_id)
   do
-    GenServer.cast(pid, {:add_seen_id_list, current_id, [seen_id]})
+    GenServer.cast(pid, {:local_seen_peer, seen_id})
   end
 
-  def add_seen_id_list(pid, current_id, seen_id_list)
+  def peer_seen_others(pid, current_id, seen_id_list)
   when is_pid(pid) and
        BroadcastID.is_valid(current_id) and
        is_list(seen_id_list)
   do
     :ok = BroadcastID.validate_list(seen_id_list)
-    GenServer.cast(pid, {:add_seen_id_list, current_id, seen_id_list})
+    GenServer.cast(pid, {:peer_seen_others, current_id, seen_id_list})
   end
 
-  def inc_broadcast_seqno(pid, id)
-  when is_pid(pid) and NetID.is_valid(id)
+  def inc_broadcast_seqno(pid)
+  when is_pid(pid)
   do
-    GenServer.call(pid, {:inc_broadcast_seqno, id})
+    GenServer.call(pid, {:inc_broadcast_seqno})
   end
 
   # Direct, read-only ETS access
@@ -82,24 +77,13 @@ defmodule Chatter.PeerDB do
     end
   end
 
-  def get_broadcast_seqno_(id)
-  when NetID.is_valid(id)
-  do
-    name = id_atom()
-    case :ets.lookup(name, id)
-    do
-      []      -> {:error, :not_found}
-      [value] -> {:ok, PeerData.broadcast_seqno(value)}
-    end
-  end
-
   def get_peers_()
   do
     name = id_atom()
     map = :ets.foldl(fn(e, acc) ->
       acc = Map.put(acc, PeerData.id(e),0)
-      acc = PeerData.seen_ids(e) |> Enum.reduce(acc, fn(x,v) ->
-        v = Map.put(v, BroadcastID.origin(x), 0)
+      PeerData.seen_ids(e) |> Enum.reduce(acc, fn(x,v) ->
+        Map.put(v, BroadcastID.origin(x), 0)
       end)
     end,
     %{},
@@ -109,16 +93,28 @@ defmodule Chatter.PeerDB do
 
   # GenServer
 
+  ########## Casts #####################
+
   defcast stop, do: stop_server(:normal)
 
-  def handle_cast({:add, id}, table)
+  def handle_cast({:add, id},
+                  [received_from: senders, can_send_to: table])
   when NetID.is_valid(id)
   do
     :ets.insert_new(table, PeerData.new(id))
-    {:noreply, table}
+    {:noreply, [received_from: senders, can_send_to: table]}
   end
 
-  def handle_cast({:add_seen_id_list, current_id, seen_ids}, table)
+  def handle_cast({:local_seen_peer, seen_id},
+                  [received_from: senders, can_send_to: table])
+  when BroadcastID.is_valid(seen_id)
+  do
+    updated_senders = PeerData.merge_seen_ids(senders, [seen_id])
+    {:noreply, [received_from: updated_senders, can_send_to: table]}
+  end
+
+  def handle_cast({:peer_seen_others, current_id, seen_ids},
+                  [received_from: senders, can_send_to: table])
   when BroadcastID.is_valid(current_id) and
        is_list(seen_ids)
   do
@@ -126,35 +122,28 @@ defmodule Chatter.PeerDB do
     :ok = add_ids(combined, table)
     :ok = update_seqnos(combined, table)
     :ok = update_seen_ids(current_id, seen_ids, table)
-    { :noreply, table }
+    {:noreply, [received_from: senders, can_send_to: table]}
   end
 
-  def handle_call({:get, id}, _from, table)
-  when NetID.is_valid(id)
+  ########## Calls #####################
+
+  def handle_call({:get_senders},
+                _from,
+                [received_from: senders, can_send_to: table])
   do
-    case :ets.lookup(table, id)
-    do
-      []      -> {:reply, :error, table}
-      [value] -> {:reply, {:ok, value}, table}
-    end
+    {:reply, {:ok, PeerData.seen_ids(senders)}, [received_from: senders, can_send_to: table]}
   end
 
-  def handle_call({:inc_broadcast_seqno, id}, _from, table)
-  when NetID.is_valid(id)
+  def handle_call({:inc_broadcast_seqno},
+                  _from,
+                  [received_from: senders, can_send_to: table])
   do
-    # make sure we have a placeholder ID in ETS
-    :ets.insert_new(table, PeerData.new(id))
-
-    # lookup and update
-    case :ets.lookup(table, id)
-    do
-      []      -> {:reply, :error, table}
-      [value] ->
-        updated_value = PeerData.inc_broadcast_seqno(value)
-        :ets.insert(table, updated_value)
-        {:reply, {:ok, PeerData.broadcast_seqno(updated_value)}, table}
-    end
+    updated_value = PeerData.inc_broadcast_seqno(senders)
+    updated_seqno = PeerData.broadcast_seqno(updated_value)
+    {:reply, {:ok, updated_seqno}, [received_from: updated_value, can_send_to: table]}
   end
+
+  ########## Private helpers #####################
 
   defp add_ids([], _table), do: :ok
 
@@ -174,7 +163,8 @@ defmodule Chatter.PeerDB do
 
     case :ets.lookup(table, head_netid)
     do
-      [] -> :error
+      [] ->
+        :error
 
       [value] ->
         updated_value = PeerData.max_broadcast_seqno(value, head_seqno)
@@ -185,18 +175,19 @@ defmodule Chatter.PeerDB do
 
   defp update_seen_ids(_current_id, [], _table), do: :ok
 
-  defp update_seen_ids(current_id, id_list, table)
+  defp update_seen_ids(current_id, [head|rest], table)
   do
-    netid = BroadcastID.origin(current_id)
+    netid = BroadcastID.origin(head)
 
     case :ets.lookup(table, netid)
     do
-      [] -> :error
+      [] ->
+        :error
 
       [value] ->
-        updated_value = PeerData.merge_seen_ids(value, id_list)
+        updated_value = PeerData.merge_seen_ids(value, [current_id])
         true = :ets.insert(table, updated_value)
-        :ok
+        update_seen_ids(current_id, rest, table)
     end
   end
 

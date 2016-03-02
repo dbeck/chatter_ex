@@ -9,7 +9,6 @@ defmodule Chatter.Supervisor do
   alias Chatter.MulticastHandler
   alias Chatter.PeerDB
   alias Chatter.SerializerDB
-  alias Chatter.Gossip
   alias Chatter.NetID
 
   def start_link(opts \\ [])
