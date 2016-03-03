@@ -248,7 +248,8 @@ defmodule Chatter.Gossip do
   when is_valid(g)
   do
     [gossip(g, :current_id) |> BroadcastID.origin | gossip(g, :distribution_list)] ++
-    Enum.map(gossip(g, :seen_ids), fn(x) -> BroadcastID.origin(x) end)
+    Enum.map(gossip(g, :seen_ids), fn(x) -> BroadcastID.origin(x) end) ++
+    gossip(g, :other_ids)
     |> Enum.uniq
   end
 
