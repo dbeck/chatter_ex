@@ -99,6 +99,7 @@ defmodule Chatter.Serializer do
     payload = Gossip.payload(gossip)
     ids = (extract_netids(gossip) ++ extract_netids(payload))
     |> Enum.uniq
+    |> Enum.sort
     id_table = NetID.encode_list(ids)
     {_count, id_map} = ids |> Enum.reduce({0, %{}}, fn(x,acc) ->
       {count, m} = acc
