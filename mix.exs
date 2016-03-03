@@ -42,7 +42,7 @@ defmodule Chatter.Mixfile do
      files: ["lib", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["David Beck"],
      licenses: ["MIT"],
-     links: %{"GitHub" => "https://github.com/dbeck/chatter_ex",
-              "Docs" => "http://dbeck.github.io/chatter_ex/"}]
+     links: %{"GitHub" => "https://github.com/dbeck/chatter_ex/tree/0.0.12",
+              "Docs" => "http://dbeck.github.io/chatter_ex/0.0.12"/}]
   end
 end
