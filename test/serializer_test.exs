@@ -14,6 +14,7 @@ defmodule Chatter.SerializerTest do
           {:broadcast_id, {:net_id, {192, 168, 1, 97}, 29999}, 4},
           [{:broadcast_id, {:net_id, {192, 168, 1, 100}, 29999}, 3},
            {:broadcast_id, {:net_id, {192, 168, 1, 134}, 29999}, 1}],
+          [{:broadcast_id, {:net_id, {192, 168, 1, 100}, 29999}, 3}],
           [{:net_id, {192, 168, 1, 97}, 29999},
            {:net_id, {192, 168, 1, 100}, 29999},
            {:net_id, {192, 168, 1, 134}, 29999}],
@@ -36,7 +37,7 @@ defmodule Chatter.SerializerTest do
   end
 
   def dummy_gossip do
-    @default_gossip |> Tuple.delete_at(4) |> Tuple.append(dummy_serializable)
+    @default_gossip |> Tuple.delete_at(5) |> Tuple.append(dummy_serializable)
   end
 
   test "encode and decode works together" do

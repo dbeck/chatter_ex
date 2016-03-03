@@ -82,7 +82,7 @@ defmodule Chatter.Gossip do
     case Macro.Env.in_guard?(__CALLER__) do
       true ->
         quote do
-          is_tuple(unquote(data)) and tuple_size(unquote(data)) == 5 and
+          is_tuple(unquote(data)) and tuple_size(unquote(data)) == 6 and
           :erlang.element(1, unquote(data)) == :gossip and
           # broadcast id
           BroadcastID.is_valid(:erlang.element(2, unquote(data))) and
@@ -95,7 +95,7 @@ defmodule Chatter.Gossip do
         end
       false ->
         quote bind_quoted: binding() do
-          is_tuple(data) and tuple_size(data) == 5 and
+          is_tuple(data) and tuple_size(data) == 6 and
           :erlang.element(1, data) == :gossip and
           # broadcast id
           BroadcastID.is_valid(:erlang.element(2, data)) and

@@ -4,7 +4,7 @@ defmodule Chatter.PlannerTest do
   alias Chatter.Planner
 
   test "dummy" do
-  	assert :ok == Planner.dummy
+  	:ok
   end
 
 end
