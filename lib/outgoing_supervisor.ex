@@ -8,6 +8,7 @@ defmodule Chatter.OutgoingSupervisor do
   alias Chatter.Gossip
   alias Chatter.NetID
   alias Chatter.BroadcastID
+  alias Chatter.Planner
 
   def start_link(args, opts \\ []) do
     case opts do
@@ -28,26 +29,27 @@ defmodule Chatter.OutgoingSupervisor do
        is_binary(key) and
        byte_size(key) == 32
   do
-    broadcast_to(Gossip.distribution_list(gossip), gossip, key)
+    Planner.plan(Gossip.distribution_list(gossip))
+    |> Enum.each( fn(p) ->
+      List.flatten(p)
+      |> Enum.shuffle
+      |> broadcast_to(gossip, key)
+    end)
   end
 
   defp broadcast_to([], _gossip, _key), do: :ok
 
   defp broadcast_to(distribution_list, gossip, key)
   do
-    len = length(distribution_list)
-    take_n = div(len, 2)
-    {next, [head|rest]} = distribution_list |> Enum.shuffle |> Enum.split(take_n)
+    [head|rest] = distribution_list
     own_id = Gossip.current_id(gossip) |> BroadcastID.origin
-
     case start_handler(locate!, [own_id: own_id, peer_id: head, key: key]) do
       {:ok, handler_pid} ->
         OutgoingHandler.send(handler_pid, gossip |> Gossip.distribution_list(rest))
       _ ->
-        [head|rest] = distribution_list
-        next = rest
+        # use the next id in case of an error
+        broadcast_to(rest, gossip, key)
     end
-    broadcast_to(next, Gossip.distribution_list(gossip, next), key)
   end
 
   def start_handler(sup_pid, [own_id: own_id, peer_id: peer_id, key: key])

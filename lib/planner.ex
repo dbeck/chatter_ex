@@ -34,19 +34,24 @@ defmodule Chatter.Planner do
   	  if HashSet.member?(netid_set, x)
   	  do
 	  	netid_set = HashSet.delete(netid_set, x)
+	  	case PeerDB.get_seen_id_list_(x)
+	  	do
+	  	  {:ok, seen_ids} ->
+		  	{mcast_group, netid_set} = Enum.reduce(seen_ids, {[x], netid_set}, fn(x2,acc2) ->
+		  	  {result_list2, netid_set} = acc2
+		  	  id = BroadcastID.origin(x2)
+		  	  if HashSet.member?(netid_set, id)
+		  	  do
+		  	  	{[id|result_list2], HashSet.delete(netid_set, id)}
+		  	  else
+		  	  	acc2
+		  	  end
+		  	end)
+		  	{[mcast_group|result_list], netid_set}
 
-	  	{:ok, seen_ids} = PeerDB.get_seen_id_list_(x)
-	  	{mcast_group, netid_set} = Enum.reduce(seen_ids, {[x], netid_set}, fn(x2,acc2) ->
-	  	  {result_list2, netid_set} = acc2
-	  	  id = BroadcastID.origin(x2)
-	  	  if HashSet.member?(netid_set, id)
-	  	  do
-	  	  	{[id|result_list2], HashSet.delete(netid_set, id)}
-	  	  else
-	  	  	acc2
-	  	  end
-	  	end)
-	  	{[mcast_group|result_list], netid_set}
+		  {:error, :not_found} ->
+		  	{[[x]|result_list], netid_set}
+		end
 	  else
 	  	acc
 	  end
