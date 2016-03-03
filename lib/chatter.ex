@@ -65,7 +65,7 @@ defmodule Chatter do
     other_peers = peers
     |> Planner.group_mcast_peers
     |> Enum.take_random(4)
-    |> Enum.each(fn(x) -> hd(x) end)
+    |> Enum.map(fn(x) -> hd(x) end)
 
     gossip = Gossip.new(own_id, seqno, tup)
     |> Gossip.distribution_list(distribution_list)
