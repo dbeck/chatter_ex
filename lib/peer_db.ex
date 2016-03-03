@@ -22,6 +22,13 @@ defmodule Chatter.PeerDB do
 
   # Convenience API
 
+  def add(pid, id_list)
+  when is_pid(pid)
+  do
+    :ok = NetID.validate_list!(id_list)
+    GenServer.cast(pid, {:add, id_list})
+  end
+
   def get_senders(pid)
   when is_pid(pid)
   do
@@ -97,11 +104,10 @@ defmodule Chatter.PeerDB do
 
   defcast stop, do: stop_server(:normal)
 
-  def handle_cast({:add, id},
+  def handle_cast({:add, id_list},
                   [received_from: senders, can_send_to: table])
-  when NetID.is_valid(id)
   do
-    :ets.insert_new(table, PeerData.new(id))
+    :ok = add_ids(id_list, table)
     {:noreply, [received_from: senders, can_send_to: table]}
   end
 
@@ -148,9 +154,17 @@ defmodule Chatter.PeerDB do
   defp add_ids([], _table), do: :ok
 
   defp add_ids([head|rest], table)
+  when BroadcastID.is_valid(head)
   do
     head_netid = BroadcastID.origin(head)
     :ets.insert_new(table, PeerData.new(head_netid))
+    add_ids(rest, table)
+  end
+
+  defp add_ids([head|rest], table)
+  when NetID.is_valid(head)
+  do
+    :ets.insert_new(table, PeerData.new(head))
     add_ids(rest, table)
   end
 

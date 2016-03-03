@@ -83,6 +83,9 @@ defmodule Chatter do
     # outgoing handler uses its already open channels and returns the gossip
     # what couldn't be delivered
     :ok = OutgoingSupervisor.broadcast(gossip, Chatter.group_manager_key)
+
+    # make sure all IDs are stored in the PeerDB
+    PeerDB.add(db_pid, distribution_list)
   end
 
   @doc """

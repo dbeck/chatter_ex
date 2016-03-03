@@ -47,7 +47,7 @@ defmodule Chatter.Planner do
 		  	  	acc2
 		  	  end
 		  	end)
-		  	{[mcast_group|result_list], netid_set}
+		  	{[(mcast_group |> Enum.shuffle)|result_list], netid_set}
 
 		  {:error, :not_found} ->
 		  	{[[x]|result_list], netid_set}
