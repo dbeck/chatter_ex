@@ -14,7 +14,7 @@ defmodule Chatter.SerializerTest do
           {:broadcast_id, {:net_id, {192, 168, 1, 97}, 29999}, 4},
           [{:broadcast_id, {:net_id, {192, 168, 1, 100}, 29999}, 3},
            {:broadcast_id, {:net_id, {192, 168, 1, 134}, 29999}, 1}],
-          [{:broadcast_id, {:net_id, {192, 168, 1, 100}, 29999}, 3}],
+          [{:net_id, {192, 168, 1, 100}, 29999}],
           [{:net_id, {192, 168, 1, 97}, 29999},
            {:net_id, {192, 168, 1, 100}, 29999},
            {:net_id, {192, 168, 1, 134}, 29999}],

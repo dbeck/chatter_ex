@@ -16,7 +16,7 @@ defmodule Chatter.Gossip do
   @type t :: record( :gossip,
                      current_id: BroadcastID.t,
                      seen_ids: list(BroadcastID.t),
-                     other_ids: list(BroadcastID.t),
+                     other_ids: list(NetID.t),
                      distribution_list: list(NetID.t),
                      payload: tuple )
 
@@ -141,16 +141,16 @@ defmodule Chatter.Gossip do
     gossip(g, :seen_ids)
   end
 
-  @spec other_ids(t, list(BroadcastID.t)) :: t
+  @spec other_ids(t, list(NetID.t)) :: t
   def other_ids(g, ids)
   when is_valid(g) and
        is_list(ids)
   do
-    :ok = BroadcastID.validate_list!(ids)
+    :ok = NetID.validate_list!(ids)
     gossip(g, other_ids: ids)
   end
 
-  @spec other_ids(t) :: list(BroadcastID.t)
+  @spec other_ids(t) :: list(NetID.t)
   def other_ids(g)
   when is_valid(g)
   do
@@ -259,7 +259,7 @@ defmodule Chatter.Gossip do
   do
     bin_current_id    = gossip(g, :current_id)        |> BroadcastID.encode_with(id_map)
     bin_seen_ids      = gossip(g, :seen_ids)          |> BroadcastID.encode_list_with(id_map)
-    bin_other_ids     = gossip(g, :other_ids)         |> BroadcastID.encode_list_with(id_map)
+    bin_other_ids     = gossip(g, :other_ids)         |> NetID.encode_list_with(id_map)
     bin_distrib       = gossip(g, :distribution_list) |> NetID.encode_list_with(id_map)
 
     << bin_current_id     :: binary,
@@ -276,7 +276,7 @@ defmodule Chatter.Gossip do
   do
     {decoded_current_id, remaining} = BroadcastID.decode_with(bin, id_map)
     {decoded_seen_ids, remaining}   = BroadcastID.decode_list_with(remaining, id_map)
-    {decoded_other_ids, remaining}  = BroadcastID.decode_list_with(remaining, id_map)
+    {decoded_other_ids, remaining}  = NetID.decode_list_with(remaining, id_map)
     {decoded_distrib, remaining}    = NetID.decode_list_with(remaining, id_map)
 
     { gossip([current_id: decoded_current_id,
