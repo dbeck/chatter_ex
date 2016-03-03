@@ -21,6 +21,7 @@ defmodule Chatter.PeerDB do
   end
 
   # Convenience API
+  def add(_pid, []), do: :ok
 
   def add(pid, id_list)
   when is_pid(pid)

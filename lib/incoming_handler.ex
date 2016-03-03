@@ -53,6 +53,9 @@ defmodule Chatter.IncomingHandler do
                                       Gossip.current_id(gossip),
                                       Gossip.seen_ids(gossip))
 
+              # register the other nodes the peer knows about
+              PeerDB.add(peer_db, Gossip.other_ids(gossip))
+
               {:ok, handler} = SerializerDB.get_(Gossip.payload(gossip))
 
               ## Logger.debug "received on TCP [#{inspect gossip}] size=[#{byte_size data}]"

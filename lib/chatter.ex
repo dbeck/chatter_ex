@@ -19,6 +19,7 @@ defmodule Chatter do
   alias Chatter.PeerDB
   alias Chatter.SerializerDB
   alias Chatter.Gossip
+  alias Chatter.Planner
 
   def start(_type, args)
   do
@@ -61,18 +62,21 @@ defmodule Chatter do
       {:error, :not_found} -> []
     end
 
+    other_peers = peers
+    |> Planner.group_mcast_peers
+    |> Enum.take_random(4)
+    |> Enum.each(fn(x) -> hd(x) end)
+
     gossip = Gossip.new(own_id, seqno, tup)
     |> Gossip.distribution_list(distribution_list)
     |> Gossip.seen_ids(seen_ids)
+    |> Gossip.other_ids(other_peers)
+    |> Gossip.remove_from_distribution_list(peers_seen_us)
 
     ## Logger.debug "multicasting [#{inspect gossip}]"
 
     # multicast first
     :ok = MulticastHandler.send(MulticastHandler.locate!, gossip)
-
-    # the remaining list must be contacted directly
-    gossip =
-      Gossip.remove_from_distribution_list(gossip, peers_seen_us)
 
     # add 1 random element to the distribution list from the original
     # distribution list
