@@ -48,6 +48,9 @@ defmodule Chatter.IncomingHandler do
             {:ok, gossip} ->
               peer_db = PeerDB.locate!
 
+              # register the peer who sent us the message
+              PeerDB.add(peer_db, Gossip.current_id(gossip))
+
               # register whom the peer has seen
               PeerDB.peer_seen_others(peer_db,
                                       Gossip.current_id(gossip),

@@ -19,6 +19,18 @@
   + [BroadcastID Entry](../docs/#broadcastid-entry)
   + [List of BroadcastIDs](../docs/#list-of-broadcastids)
   + [List of NetIDs](../docs/#list-of-netids)
+- [Quickstart Guide](../docs/#quickstart-guide)
+  + [Add dependency](../docs/#add-dependency)
+  + [Start the application](../docs/#start-the-application)
+  + [Configure](../docs/#configure)
+  + [Register message handler](../docs/#register-message-handler)
+  + [Broadcast to others](../docs/#broadcast-to-others)
+- [FAQ](../docs/#faq)
+  + [What nodes are available at startup?](../docs/#what-nodes-are-available-at-startup)
+  + [When does Chatter populate the peer database?](../docs/#when-does-chatter-populate-the-peer-database)
+  + [How does message encoding work](../docs/#how-does-message-encoding-work)
+  + [How does message decoding work](../docs/#how-does-message-decoding-work)
+  + [What is a message handler?](../docs/#what-is-a-message-handler)
 
 ## Overview
 
@@ -43,7 +55,7 @@ Here is an illustration to show the distribution lists:
 
 ![Log broadcast](log_broadcast.png)
 
-And an other one that shows the tree wrt to rounds:
+And an other one that shows the tree aligned as message distribution rounds:
 
 ![TCP broadcast](tcp_broadcast.png)
 
@@ -207,3 +219,149 @@ This part holds the extra information that allows `Chatter` nodes to optimize me
 | \*     | Variable | NetID reference \*   | **VarInt**: referes to the **NetID Table**                         |
 
 
+## Quickstart Guide
+
+- add dependency
+- start the application
+- set configuration values, especially the encryption key
+- register handler
+- broadcast to others
+
+### Add dependency
+
+```elixir
+  defp deps do
+    [
+      {:xxhash, git: "https://github.com/pierresforge/erlang-xxhash"},
+      {:chatter, "~> 0.0.12"}
+    ]
+  end
+```
+
+### Start the application
+
+```elixir
+  def application do
+    [
+      applications: [:logger, :chatter],
+      mod: {YourModule, []}
+    ]
+  end
+```
+
+### Configure
+
+```elixir
+use Mix.Config
+
+config :chatter,
+  my_addr: System.get_env("CHATTER_ADDRESS"),
+  my_port: System.get_env("CHATTER_PORT") || "29999",
+  multicast_addr: System.get_env("CHATTER_MULTICAST_ADDRESS") || "224.1.1.1",
+  multicast_port: System.get_env("CHATTER_MULTICAST_PORT") || "29999",
+  multicast_ttl: System.get_env("CHATTER_MULTICAST_TTL") || "4",
+  key: System.get_env("CHATTER_KEY") || "01234567890123456789012345678912"
+```
+
+### Register message handler
+
+```elixir
+iex(1)> extract_netids_fn = fn(t) -> [] end
+iex(2)> encode_with_fn = fn(t,_id_map) -> :erlang.term_to_binary(t) end
+iex(3)> decode_with_fn = fn(b,_id_map) -> {:erlang.binary_to_term(b), <<>>} end
+iex(4)> dispatch_fn = fn(t) -> IO.inspect(["arrived", t])
+  {:ok, t}
+end
+iex(5)> handler = Chatter.MessageHandler.new(
+    {:hello, "world"},
+    extract_netids_fn,
+    encode_with_fn,
+    decode_with_fn,
+    dispatch_fn)
+iex(6)> db_pid = Chatter.SerializerDB.locate!
+iex(7)> Chatter.SerializerDB.add(db_pid, handler)
+```
+
+### Broadcast to others
+
+```elixir
+iex(8)> destination = Chatter.NetID.new({192, 168, 1, 100}, 29999)
+iex(9)> Chatter.broadcast([destination], {:hello, "world"})
+```
+
+## FAQ
+
+### What nodes are available at startup
+
+When Chatter starts its peer database is empty. The database of known peers are populated when receiving or sending messages.
+
+### When does Chatter populate the peer database
+
+It populates the peer DB:
+
+- when Chatter sends a message to a set of nodes, then all peer NetIDs will also be saved in the peer database
+- when Chatter receives a message on UDP multicast or TCP, it saves these into the peer database:
+  + the `sender ID`
+  + the `distribution list` in the message
+  + the `seen ids list` in the message
+  + the `other ids` in the message
+
+### How does message encoding work
+
+The high level flow of message encoding is:
+
+- gather the NetIDs from the Gossip and the Payload (by calling the user supplied `extract_netids` callback)
+- create a map of `NetID` -> `Table position`
+- encode the Gossip with the help of the NetID map
+- inserts a user supplied `Payload Type Tag` into the message
+- call a user callback `encode_with` with the Payload and the NetID map to convert the payload to binary
+
+To be able to serialize the user content, Chatter needs a few callbacks to be registered. Please see the details below, in the `MessageHandler` section.
+
+### How does message decoding work
+
+- chatter extracts the NetID table from the incoming message
+- converts the NetIDs to a map of `Table position` -> `NetID`
+- decodes the `Payload Type Tag` from the message and finds the registered callback for the given message type
+- calls the registered `decode_with` callback with the Payload binary and the `Table Postion` -> `NetID` map
+- calls the registered `dispatch` function with the result of the decode step
+
+### What is a message handler
+
+To be able to handle messages the user needs to pass five information to the Chatter library:
+
+1. How to match the incoming message types with the user supplied deserialization code?
+2. (Optionally) How to extract NetIDs from the user payload if there is any? (`extract_netids`)
+3. How to convert the user object to binary? (`encode_with`)
+4. How to convert the binary message to an user object? (`decode_with`)
+5. What to do with the incoming messages? (`dispatch`)
+
+**Here is a very simple and inefficient illustration:**
+
+```elixir
+iex(1)> extract_netids_fn = fn(t) -> [] end
+iex(2)> encode_with_fn = fn(t,_id_map) -> :erlang.term_to_binary(t) end
+iex(3)> decode_with_fn = fn(b,_id_map) -> {:erlang.binary_to_term(b), <<>>} end
+iex(4)> dispatch_fn = fn(t) -> IO.inspect(["arrived", t])
+  {:ok, t}
+end
+iex(5)> handler = Chatter.MessageHandler.new(
+    {:hello, "world"},
+    extract_netids_fn,
+    encode_with_fn,
+    decode_with_fn,
+    dispatch_fn)
+```
+
+The user in this example doesn't want to use the `NetID table`, so the `extract_netids` function returns an empty list. The `encode_with` and `decode_with` functions are using the Erlang serialization functions. The encoder and decoder just ignore the id_map parameter, beause they don't need it. The `dispatch` function prints the incoming record.
+
+The `MessageHandler` also needs to be registered so `Chatter` will know about it:
+
+```elixir
+iex(6)> db_pid = Chatter.SerializerDB.locate!
+iex(7)> Chatter.SerializerDB.add(db_pid, handler)
+```
+
+The first parameter of the message handler takes a tuple and assumes the first element to be an atom. This will be converted to string and a 32 bit checksum of this string will identify the message type both in the SerializerDB and the `Payload Type Tag` field of the message.
+
+`Chatter` assumes that the user passes tuples as message data and the first element of the tuple is an atom that identifies the message type.
