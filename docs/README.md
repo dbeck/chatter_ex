@@ -2,7 +2,7 @@
 
 ## Message format
 
-![message format](chatter_message_structure_0012.png)
+![message format](chatter_message_structure_0013.png)
 
 ### Message header
 
