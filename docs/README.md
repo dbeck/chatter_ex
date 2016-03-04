@@ -33,6 +33,8 @@ In Elixir:
 
 [The encoder code is available here](../lib//serializer.ex#L159) and the [decoder is here](../lib/serializer.ex#L166)
 
+### The message structure
+
 ![message format](chatter_message_structure_0013.png)
 
 ### Message header
@@ -40,9 +42,23 @@ In Elixir:
 | Offset | Size     | Field Name        | Description                                                          |
 | ------ | -------- | ----------------- | -------------------------------------------------------------------- |
 | 0      | 1        | SOM               | Start Of Message, always 0xff                                        |
-| 1      | 32       | Padding           | 32 bytes random data                                                 |
-| 33     | 4        | Checksum          | Big Endian: XXHash-32 checksum of the compressed Gossip that follows |
-| 37     | Variable | CompressedGossip  | Gossip data compressed with Snappy                                   |
+| 1      | Variable | Encrypted Size    | VarInt: size of the **Encrypted Content** that follows               |
+
+### Encrypted Content
+
+The message content is compressed with AES-256-CTR where:
+
+- **IV** is "-- ScaleSmall --"
+- **key** is 32 bytes of user supplied key, with the following rules applied:
+  + If **key** is longer than 32 bytes, it will be chopped
+  + If **key** is shorter than 32 bytes, "01234567890123456789012345678901" will be concatenated and chopped to 32 bytes
+
+| Offset | Size     | Field Name        | Description                                                          |
+| ------ | -------- | ----------------- | -------------------------------------------------------------------- |
+| 0      | 32       | Padding           | 32 bytes random data                                                 |
+| 32     | Variable | Decompressed Size | VarInt: Size of the decompressed Gossip                              |
+| *      | 4        | Checksum          | Big Endian: XXHash-32 checksum of the compressed Gossip that follows |
+| *      | Variable | CompressedGossip  | Gossip data compressed with Snappy                                   |
 
 ### Compressed Gossip
 
