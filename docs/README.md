@@ -1,5 +1,49 @@
 # Chatter docs
 
+## TOC
+
+- [Overview](../docs/#overview)
+- [Message format](../docs/#message-format)
+  + [VarInt](../docs/#varint)
+  + [The message structure](../docs/#the-message-structure)
+  + [Message header](../docs/#message-header)
+  + [Encrypted Content](../docs/#encrypted-content)
+  + [Compressed Gossip](../docs/#compressed-gossip)
+  + [NetID Table](../docs/#netid-table)
+  + [NetID Entry](../docs/#netid-entry)
+  + [Encoded Gossip](../docs/#encoded-gossip)
+  + [BroadcastID Entry](../docs/#broadcastid-entry)
+  + [List of BroadcastIDs](../docs/#list-of-broadcastids)
+  + [List of NetIDs](../docs/#list-of-netids)
+
+## Overview
+
+Chatter library allows efficient and secure broadcasting messages to a set of nodes. It does not guarantee delivery since it uses UDP multicast on the local network, neither does guarantee one time delivery. Chatter has a few measures against message loss.
+
+Chatter focuses on efficient message delivery by discovering network topology and building a logarithmic distribution tree. The tree instructs nodes to deliver messages on behalf of other nodes.
+
+Chatter further optimizes the message distribution by removing nodes from the distribution tree that are available through UDP multicast and dispatches the message through multicast.
+
+### How distribution tree works for the simple TCP case
+
+![Log broadcast](log_broadcast.png)
+
+![TCP broadcast](tcp_broadcast.png)
+
+### How UDP optimization works
+
+Chatter attaches a extra information to each packets it sends out:
+
+- own ID
+- seen IDs on UDP multicast
+- few random node IDs
+- distribution list
+
+### Seen IDs
+
+When Chatter
+
+
 ## Message format
 
 ### VarInt
@@ -121,4 +165,5 @@ This part holds the extra information that allows `Chatter` nodes to optimize me
 | ------ | -------- | -------------------- | ------------------------------------------------------------------ |
 | 0      | Variable | Length               | **VarInt**: number of NetID references to follow                   |
 | \*     | Variable | NetID reference \*   | **VarInt**: referes to the **NetID Table**                         |
+
 
