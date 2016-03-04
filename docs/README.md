@@ -71,11 +71,18 @@ Originally we had a nicely laid out logarithmic distribution tree and by applyin
 
 ![mixed broadcast](mixed_broadcast1.png)
 
+On `subnet A` we do well, but on `subnet B` there are a few extra unneeded message rounds. This is because the algorithm is not using any information we my have from `subnet B`.
 
-### Seen IDs
+To solve this we need to do a few steps:
 
-When Chatter
+- every time a node receives a message for delivery it splits the distibution list into distinct sets based on the UDP `seen ID` lists it has received
+- these sets are assumed to be able to communicate to each other using UDP multicast
+- the node orginizes these sets into a random list (of distinct sets)
+- when it does its message rounds it sends over half of its list (of sets) to the next hop
 
+![udp optimized](udp_optimized.png)
+
+The randomization ensures that every node will hear about others sooner or later. The algorithm as illustrated above is still logarithmic but in the known multicast groups rather than the induvidual nodes. When all nodes reside on different subnets or UDP multicast is not permitted or not supported, the algorithm works the same way as the original logarithmic broadcast.
 
 ## Message format
 
