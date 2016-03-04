@@ -56,17 +56,29 @@ The message content is compressed with AES-256-CTR where:
 | Offset | Size     | Field Name        | Description                                                          |
 | ------ | -------- | ----------------- | -------------------------------------------------------------------- |
 | 0      | 32       | Padding           | 32 bytes random data                                                 |
-| 32     | Variable | Decompressed Size | VarInt: Size of the decompressed Gossip                              |
+| 32     | Variable | Decompressed Size | **VarInt**: Size of the *decompressed* Gossip                            |
 | *      | 4        | Checksum          | Big Endian: XXHash-32 checksum of the compressed Gossip that follows |
-| *      | Variable | CompressedGossip  | Gossip data compressed with Snappy                                   |
+| *      | Variable | CompressedGossip  | Gossip data compressed with **Snappy**                               |
 
 ### Compressed Gossip
+
+The Gossip has these parts:
+
+| Offset | Size     | Field Name          | Description                                                        |
+| ------ | -------- | ------------------- | ------------------------------------------------------------------ |
+| 0      | Variable | NetID Table         | Lookup table for efficient compression of redundant NetID information |
+| *      | Variable | Encoded Gossip      | The extra data that allows Chatter to discover nodes and broadcast efficiently |
+| \*     | Variable | Payload Type Tag    | **VarInt**: Identifies the user mesage type so the receiver will know how to decode the user message content |
+| *      | Variable | User content        | |
+
+### NetID Table
+
+NetID's are central to `Chatter` and used in many places, often redundantly, for that reason they are extracted from the Gossip content into a table. The table positions (from 0) identify the NetID entries and these positions are used in the Gossip encoding as a reference to the given NetID.
 
 | Offset | Size     | Field Name          | Description                                                        |
 | ------ | -------- | ------------------- | ------------------------------------------------------------------ |
 | 0      | Variable | NetID Table Length  | Number of NetID entries in VarInt format (see description below)   |
 | *      | 6        | NetID entry         | See below                                                          |
-
 
 ### NetID Entry
 
@@ -76,10 +88,37 @@ The message content is compressed with AES-256-CTR where:
 | 1      | 1        | B                   | B in the A.**B**.C.D of IPv4 address                               |
 | 2      | 1        | C                   | C in the A.B.**C**.D of IPv4 address                               |
 | 3      | 1        | D                   | D in the A.B.C.**D** of IPv4 address                               |
-| 4      | 2        | Port                | Little Endian: unsigned short port number                          |
+| 4      | 2        | Port                | Big Endian: unsigned short port number                             |
 
+### Encoded Gossip
 
+This part holds the extra information that allows `Chatter` nodes to optimize message deliver and discover each other.
 
+| Offset | Size     | Field Name           | Description                                                        |
+| ------ | -------- | -------------------- | ------------------------------------------------------------------ |
+| 0      | Variable | Current Broadcast ID | **BroadcastID**: Identifies the sender, see the encoding below     |
+| \*     | Variable | Seen Broadcast IDs   | **List of BroadcastIDs**: tells from whom the broadcaster has seen *UDP multicast messages* |
+| \*     | Variable | Remote NetIDs        | **List of NetIDs**: telling others about the rest of the world (see explanation below) |
+| \*     | Variable | Distribution list    | **List of NetIDs**: who should receive this `Chatter` message (see explanation below) |
 
+### BroadcastID Entry
 
+| Offset | Size     | Field Name           | Description                                                        |
+| ------ | -------- | -------------------- | ------------------------------------------------------------------ |
+| 0      | Variable | NetID reference      | **VarInt**: refers to the **NetID Table**                          |
+| \*     | Variable | Sequence number      | **VarInt**: bumped at every new broadcast                          |
+
+### List of BroadcastIDs
+
+| Offset | Size     | Field Name           | Description                                                        |
+| ------ | -------- | -------------------- | ------------------------------------------------------------------ |
+| 0      | Variable | Length               | **VarInt**: number of BroadcastIDs to follow                       |
+| \*     | Variable | BroadcastID \*       | **BrodcastID** entries                                             |
+
+### List of NetIDs
+
+| Offset | Size     | Field Name           | Description                                                        |
+| ------ | -------- | -------------------- | ------------------------------------------------------------------ |
+| 0      | Variable | Length               | **VarInt**: number of NetID references to follow                   |
+| \*     | Variable | NetID reference \*   | **VarInt**: referes to the **NetID Table**                         |
 
