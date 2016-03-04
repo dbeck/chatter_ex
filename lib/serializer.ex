@@ -17,38 +17,63 @@ defmodule Chatter.Serializer do
        is_binary(key) and
        byte_size(key) == 32
   do
-    encoded = encode_gossip(gossip)
-    cksum   = :xxhash.hash32(encoded)
-
-    {:ok, compressed} = :snappy.compress(encoded)
+    encoded            = encode_gossip(gossip)
+    encoded_size_bin   = byte_size(encoded) |> encode_uint
+    cksum              = :xxhash.hash32(encoded)
+    {:ok, compressed}  = :snappy.compress(encoded)
 
     to_encrypt = <<
        :rand.uniform(0xffff_ffff_ffff_ffff) :: size(64),
        :rand.uniform(0xffff_ffff_ffff_ffff) :: size(64),
        :rand.uniform(0xffff_ffff_ffff_ffff) :: size(64),
        :rand.uniform(0xffff_ffff_ffff_ffff) :: size(64),
-       cksum :: size(32),
+       cksum :: big-size(32),
+       encoded_size_bin :: binary,
        compressed :: binary
     >>
 
     {_new_state, encrypted} = :crypto.stream_init(:aes_ctr, key, "-- ScaleSmall --")
     |> :crypto.stream_encrypt(to_encrypt)
 
-    << 0xff :: size(8), encrypted :: binary >>
+    encrypted_size_bin = byte_size(encrypted) |> encode_uint
+
+    << 0xff :: size(8),
+       encrypted_size_bin :: binary,
+       encrypted :: binary >>
   end
 
   @spec decode(binary, binary) :: {:ok, Gossip.t} | {:error, :invalid_data, integer}
-  def decode(<< 0xff :: size(8), encrypted :: binary >>, key)
-  when byte_size(encrypted) > 36 and
+  def decode(<< 0xff :: size(8), rest :: binary>>, key)
+  when byte_size(rest) > 36 and
+       is_binary(key) and
+       byte_size(key) == 32
+  do
+    {decoded_size, remaining} = decode_uint(rest)
+    decode_with_size(decoded_size, remaining, key)
+  end
+
+  @spec decode_with_size(integer, binary, binary) :: {:ok, Gossip.t} | {:error, :invalid_data, integer}
+  def decode_with_size(msg_len, << encrypted :: binary >>, key)
+  when is_integer(msg_len) and
+       msg_len > 0 and
+       byte_size(encrypted) == msg_len and
        is_binary(key) and
        byte_size(key) == 32
   do
     {_new_state, decrypted} = :crypto.stream_init(:aes_ctr, key, "-- ScaleSmall --")
     |> :crypto.stream_decrypt(encrypted)
 
-    << _ :: size(64), _ :: size(64), _ :: size(64), _ :: size(64),
-       cksum :: size(32),
-       msg :: binary >> = decrypted
+    << _ :: big-size(64), _ :: big-size(64), _ :: big-size(64), _ :: big-size(64),
+       cksum :: big-size(32),
+       size_and_msg :: binary >> = decrypted
+
+    {decoded_size, remaining} = decode_uint(size_and_msg)
+
+    msg = case remaining do
+      << msg :: binary-size(decoded_size) >> -> msg
+      << msg :: binary-size(decoded_size), _rest :: binary >> -> msg
+      _ -> ""
+    end
 
     case :snappy.decompress(msg)
     do
@@ -91,6 +116,8 @@ defmodule Chatter.Serializer do
         {:error, :invalid_data, :corrupted_data}
     end
   end
+
+  def decode_with_size(msg_len, _encrypted, _key), do: {:error, :invalid_data, :encrypted_data_not_valid}
 
   @spec encode_gossip(Gossip.t) :: binary
   def encode_gossip(gossip)

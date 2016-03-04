@@ -155,7 +155,7 @@ defmodule Chatter.NetID do
   when is_valid(id)
   do
     {ip1, ip2, ip3, ip4} = net_id(id, :ip)
-    << ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), net_id(id, :port) :: little-size(16) >>
+    << ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), net_id(id, :port) :: big-size(16) >>
   end
 
   @spec encode_list(list(t)) :: binary
@@ -183,14 +183,14 @@ defmodule Chatter.NetID do
   end
 
   @spec decode(binary) :: {t, binary}
-  def decode(<< ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), port :: little-size(16) >>)
+  def decode(<< ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), port :: big-size(16) >>)
   when is_valid_port(port) and
        is_valid_ip({ip1, ip2, ip3, ip4})
   do
     {net_id(ip: {ip1, ip2, ip3, ip4}) |> net_id(port: port), <<>>}
   end
 
-  def decode(<< ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), port :: little-size(16), remaining :: binary >>)
+  def decode(<< ip1 :: size(8), ip2 :: size(8), ip3 :: size(8), ip4 :: size(8), port :: big-size(16), remaining :: binary >>)
   when is_valid_port(port) and
        is_valid_ip({ip1, ip2, ip3, ip4})
   do
