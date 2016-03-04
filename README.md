@@ -2,7 +2,9 @@
 
 Chatter is gossip like communication library to broadcast information to a set of peers. It utilizes TCP unicast and UDP multicast as well.
 
-The main documentation is available at: [chatter docs](http://dbeck.github.io/chatter_ex/) and the inline documentation is avalable [here](https://github.com/dbeck/chatter_ex/blob/master/lib/chatter.ex)
+The main documentation is available under [docs/](docs/) and the inline documentation is avalable [here](https://github.com/dbeck/chatter_ex/blob/master/lib/chatter.ex)
+
+The original, introduction post for version 0.0.11 is available [here](http://dbeck.github.io/Chatter-extracted-from-ScaleSmall/).
 
 License
 =======
