@@ -233,7 +233,7 @@ This part holds the extra information that allows `Chatter` nodes to optimize me
   defp deps do
     [
       {:xxhash, git: "https://github.com/pierresforge/erlang-xxhash"},
-      {:chatter, "~> 0.0.12"}
+      {:chatter, "~> 0.0.14"}
     ]
   end
 ```
