@@ -3,6 +3,10 @@
 ## TOC
 
 - [Overview](../docs/#overview)
+  + [How distribution tree works for the simple TCP case](../docs/#how-distribution-tree-works-for-the-simple-tcp-case)
+  + [How UDP optimization works](../docs/#how-udp-optimization-works)
+  + [How to discover non local areas](../docs/#how-to-discover-non-local-areas)
+  + [Modified distribution tree](../docs/#modified-distribution-tree)
 - [Message format](../docs/#message-format)
   + [VarInt](../docs/#varint)
   + [The message structure](../docs/#the-message-structure)
@@ -24,20 +28,49 @@ Chatter focuses on efficient message delivery by discovering network topology an
 
 Chatter further optimizes the message distribution by removing nodes from the distribution tree that are available through UDP multicast and dispatches the message through multicast.
 
-### How distribution tree works for the simple TCP case
-
-![Log broadcast](log_broadcast.png)
-
-![TCP broadcast](tcp_broadcast.png)
-
-### How UDP optimization works
-
 Chatter attaches a extra information to each packets it sends out:
 
 - own ID
 - seen IDs on UDP multicast
 - few random node IDs
 - distribution list
+
+### How distribution tree works for the simple TCP case
+
+The `distribution list` that is passed along the messages instructs the receiver to forward the message to the nodes on the list. In the simple TCP case, the reciver selects a node from the list and passes the message along with half of the distribution list. All receivers do the same in a loop, so in each round more and more nodes will be involved with less and less work. It is easy to prove that the messages will be dispatched in log n rounds.
+
+Here is an illustration to show the distribution lists:
+
+![Log broadcast](log_broadcast.png)
+
+And an other one that shows the tree wrt to rounds:
+
+![TCP broadcast](tcp_broadcast.png)
+
+### How UDP optimization works
+
+The drawback of the logarithmic TCP dispatch is that the data travelling on the network explodes when more and more nodes dispatching messages. With a large number of nodes this can be an issue. The funny part is that the message payload would be the same for this message storm.
+
+Chatter discovers the LAN, records and passes information about other nodes so all participants will slowly learn who is available through UDP multicast.
+
+These rules help the optimization:
+
+1. when a node receives a multicast packet, it records the senders ID
+2. when a node sends a packet either on TCP or UDP, it sends over the list of IDs it has seen
+3. the receiver records whom the sender has seen
+
+Based on the `seen id list` every node can verify if the peer he intends to send a message to has already confirmed that it had seen as an UDP multicast sender. If this holds, then the node is free to remove the recipient from the TCP dispatch tree.
+
+### How to discover non local areas
+
+Chatter will know about other peers on the same LAN quickly. The non local nodes are still a problem though. Based on the `seen id list` Chatter can divide the nodes into distinct sets that are not doing multicast to each other. Chatter then picks a random node from each set and puts them into the `random other nodes list` part of the message. Chatter limits this part not to be more than four at any message. This allows nodes to share knowledge about other parts of the network.
+
+### Modified distribution tree
+
+Originally we had a nicely laid out logarithmic distribution tree and by applying the UDP optimization it became more optimial. The solution in that form is still not perfect. Here is an illustration of the problem:
+
+![mixed broadcast](mixed_broadcast1.png)
+
 
 ### Seen IDs
 
