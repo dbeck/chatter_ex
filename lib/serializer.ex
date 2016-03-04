@@ -67,13 +67,7 @@ defmodule Chatter.Serializer do
        cksum :: big-size(32),
        size_and_msg :: binary >> = decrypted
 
-    {decoded_size, remaining} = decode_uint(size_and_msg)
-
-    msg = case remaining do
-      << msg :: binary-size(decoded_size) >> -> msg
-      << msg :: binary-size(decoded_size), _rest :: binary >> -> msg
-      _ -> ""
-    end
+    {_decoded_size, msg} = decode_uint(size_and_msg)
 
     case :snappy.decompress(msg)
     do
