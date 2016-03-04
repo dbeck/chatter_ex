@@ -42,7 +42,7 @@ In Elixir:
 | Offset | Size     | Field Name        | Description                                                          |
 | ------ | -------- | ----------------- | -------------------------------------------------------------------- |
 | 0      | 1        | SOM               | Start Of Message, always 0xff                                        |
-| 1      | Variable | Encrypted Size    | VarInt: size of the **Encrypted Content** that follows               |
+| 1      | Variable | Encrypted Size    | **VarInt**: size of the **Encrypted Content** that follows           |
 
 ### Encrypted Content
 
