@@ -4,7 +4,7 @@ defmodule Chatter.Mixfile do
   def project do
     [
       app: :chatter,
-      version: "0.0.12",
+      version: "0.0.13",
       elixir: "~> 1.1",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -42,7 +42,7 @@ defmodule Chatter.Mixfile do
      files: ["lib", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["David Beck"],
      licenses: ["MIT"],
-     links: %{"GitHub" => "https://github.com/dbeck/chatter_ex/tree/0.0.12",
-              "Docs" => "http://dbeck.github.io/chatter_ex/0.0.12/"}]
+     links: %{"GitHub" => "https://github.com/dbeck/chatter_ex/tree/0.0.13/",
+              "Docs" => "https://github.com/dbeck/chatter_ex/tree/0.0.13/docs/"}]
   end
 end
